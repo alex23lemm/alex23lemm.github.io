@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Alex Lemm">
+    <meta name="description" content="Alex Lemm&#39;s personal website">
+    <meta name="keywords" content="blog,analytics,personal,r,datascience,aws">
+
+    <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="SageMaker fundamentals for R users - 02: Train a model with a built-in algo"/>
+<meta name="twitter:description" content="The SageMaker Fundamentals for R users article series is for experienced R users with no prior Amazon SageMaker knowledge, who want to use their own (local) RStudio installation as an alternative to SageMaker Notebooks to connect to SageMaker to train, tune, evaluate, deploy and monitor machine learning models in the cloud.
+We will use a single project example throughout the article series to explain the entire machine learning process end-to-end using SageMaker from a data science practitioner perspective."/>
+
+    <meta property="og:title" content="SageMaker fundamentals for R users - 02: Train a model with a built-in algo" />
+<meta property="og:description" content="The SageMaker Fundamentals for R users article series is for experienced R users with no prior Amazon SageMaker knowledge, who want to use their own (local) RStudio installation as an alternative to SageMaker Notebooks to connect to SageMaker to train, tune, evaluate, deploy and monitor machine learning models in the cloud.
+We will use a single project example throughout the article series to explain the entire machine learning process end-to-end using SageMaker from a data science practitioner perspective." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://alex23lemm.github.io/posts/2020-07-09-training-a-model-with-a-built-in-algorithm/" />
+<meta property="article:published_time" content="2020-07-09T00:00:00+00:00" />
+<meta property="article:modified_time" content="2020-07-09T00:00:00+00:00" />
+
+
+    
+      <base href="https://alex23lemm.github.io/posts/2020-07-09-training-a-model-with-a-built-in-algorithm/">
+    
+    <title>
+  SageMaker fundamentals for R users - 02: Train a model with a built-in algo · alex23lemm
+</title>
+
+    
+      <link rel="canonical" href="https://alex23lemm.github.io/posts/2020-07-09-training-a-model-with-a-built-in-algorithm/">
+    
+
+    <link href="https://fonts.googleapis.com/css?family=Lato:400,700%7CMerriweather:300,700%7CSource+Code+Pro:400,700" rel="stylesheet">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" integrity="sha256-l85OmPOjvil/SOvVt3HnSSjzF1TUMyT9eV0c2BzEGzU=" crossorigin="anonymous" />
+
+    
+      
+      
+      <link rel="stylesheet" href="https://alex23lemm.github.io/css/coder.min.28d751104f30c16da1aa1bb04015cbe662cacfe0d1b01af4f2240ad58580069c.css" integrity="sha256-KNdREE8wwW2hqhuwQBXL5mLKz&#43;DRsBr08iQK1YWABpw=" crossorigin="anonymous" media="screen" />
+    
+
+    
+
+    
+
+    
+
+    
+    
+    <link rel="icon" type="image/png" href="https://alex23lemm.github.io/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://alex23lemm.github.io/images/favicon-16x16.png" sizes="16x16">
+
+    <meta name="generator" content="Hugo 0.80.0" />
+  </head>
+
+  <body class=" ">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://alex23lemm.github.io/">
+      alex23lemm
+    </a>
+    <input type="checkbox" id="menu-toggle" />
+    <label class="menu-button float-right" for="menu-toggle"><i class="fas fa-bars"></i></label>
+    <ul class="navigation-list">
+      
+        
+          <li class="navigation-item">
+            <a class="navigation-link" href="https://alex23lemm.github.io/posts/">Blog</a>
+          </li>
+        
+      
+      
+    </ul>
+  </section>
+</nav>
+<link href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/atom-one-dark-reasonable.min.css" rel="stylesheet">
+
+
+      <div class="content">
+        
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">SageMaker fundamentals for R users - 02: Train a model with a built-in algo</h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fas fa-calendar"></i>
+              <time datetime='2020-07-09T00:00:00Z'>
+                Jul 9, 2020
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fas fa-clock"></i>
+              25 minutes read
+            </span>
+          </div>
+          
+          
+        </div>
+      </header>
+
+      <div>
+        <p>The <strong>SageMaker Fundamentals for R users</strong> article series is for experienced 
+R users with no prior Amazon SageMaker knowledge, who want to use their 
+own (local) RStudio installation as an alternative to SageMaker Notebooks 
+to connect to SageMaker to train, tune, evaluate, deploy and monitor machine 
+learning models in the cloud.</p>
+<p>We will use a single project example throughout the article series to 
+explain the entire machine learning process end-to-end using SageMaker from 
+a data science practitioner perspective. In addition, you will gain gain a 
+solid understanding of the underlying SageMaker fundamentals, such as what 
+happens behind the scenes when a training, tuning job or batch inference 
+job is started. We show R recipes and best practices on how to parse 
+and visualize the responses returned from Amazon SageMaker in the 
+different stages of the machine learning process.</p>
+<p><strong>In this second article of the series</strong> you will learn how to start a SageMaker
+training job using the built-in XGBoost algorithm to solve a binary 
+classification problem and how to start a batch inference job to evaluate 
+the final model performance. Along the way we have a closer look at the 
+underlying mechanisms of SageMaker training jobs and SageMaker batch 
+inference jobs. To connect to SageMaker from RStudio we will use the conda environment we created in the first article <a href="../2020-06-30-connecting-local-rstudio-to-amazon-sagemaker/">01 - Connecting RStudio to SageMaker</a>.</p>
+<p>The entire code of this article is also part of a self-paced and fully 
+reproducible workshop that you can <a href="https://github.com/alex23lemm/AWS-SageMaker-Fundamentals-R-Workshop">download from GitHub here</a>.</p>
+<h2 id="introduction">Introduction</h2>
+<p>A common approach when running through a machine learning project using R is to use different scripts that correspond to one step of the machine learning process: You have one script for the data import, one script for the data exploration, one script for capturing the preprocessing, probably one script for each specific model training and evaluation run, etc. Alternatively, you might have just a single script for really small projects. Either way, most probably you will run all scripts on the same machine.</p>
+<p>And that is one of the major differences when using SageMaker for your machine learning projects: Each major step of the machine learning process (loading and exploring the data, model training, model evaluation, model deployment and prediction of new unseen data) will be executed on different EC2 instances in the cloud, with you specifying the type and number of instances.</p>
+<p>Most SageMaker users leverage SageMaker Notebooks for</p>
+<ul>
+<li>the data exploration and preprocessing phase and</li>
+<li>the orchestration of the downstream steps of the machine learning process that are executed on different EC2 instances.</li>
+</ul>
+<p>However, we will use RStudio instead of SageMaker Notebooks for the data exploration and preprocessing phase as well as for the orchestration of a training job and a batch inference job. RStudio will therefore serve as a &ldquo;remote control&rdquo; for SageMaker.</p>
+<p>Next, we will have a closer look at what actually happens behind the scenes when a SageMaker training job using a built-in algorithm is started and executed.</p>
+<h2 id="the-sagemaker-training-process">The SageMaker training process</h2>
+<p>Every Machine Learning model that is trained in SageMaker as part of a training job has its own short-lived cluster. The cluster consists of one or more EC2 instances you specify. The EC2 training cluster is only live for the number of seconds your model is trained and will come down immediately after the training is finished.</p>
+<p>SageMaker executes the following steps automatically once a single training job is started using the <code>fit()</code> function via the API:</p>
+<ol>
+<li>The new EC2 training cluster comes online.</li>
+<li>The docker container training image from the SageMaker built-in algorithm that lives in the Elastic Container Registry (ECR) is pulled into the training cluster AND the training and validation data sets are transferred from the specified Amazon S3 bucket to the training cluster.</li>
+<li>Once the training job finishes the trained machine learning model artifacts are stored in Amazon S3.</li>
+</ol>
+<p><img src="images/sagemaker_training_process_small_1.2.png" alt=""></p>
+<p>Even though the image shows two separate S3 buckets for the training input and the training output you can also use the same bucket as part of the process.</p>
+<p>Now that you have a high-level understanding about the SageMaker training process, let us have a look at the data and the underlying problem we like to solve.</p>
+<h2 id="the-data-set">The data set</h2>
+<p>We will use the hotel bookings data from <a href="https://www.tidymodels.org/start/case-study/">Antonio, Almeida, and Nunes (2019)</a> to predict which hotel stays include children vs. those that do not based on the other characteristics such as how long the guests stayed, how much they paid, etc. The data set is also featured in a <a href="https://juliasilge.com/blog/hotels-recipes/">TidyTuesday article</a> from Julia Silge including an in-depth data exploration and in a <a href="https://www.tidymodels.org/start/case-study/">tidymodels tutorial</a>. We will also use <a href="https://gist.github.com/topepo/05a74916c343e57a71c51d6bc32a21ce">the slightly edited version</a> of the data set in this article which is used in the tutorial.</p>
+<h2 id="loading-all-necessary-libraries">Loading all necessary libraries</h2>
+<p>To use code in this article, you will need to install the following packages:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">library</span>(readr)        <span style="color:#75715e"># for importing the raw data and saving trainig, validation, test sets to disk </span>
+<span style="color:#a6e22e">library</span>(recipes)      <span style="color:#75715e"># for preprocessing the data</span>
+<span style="color:#a6e22e">library</span>(dplyr)        <span style="color:#75715e"># for preprocessing the data</span>
+<span style="color:#a6e22e">library</span>(rsample)      <span style="color:#75715e"># for splitting the data</span>
+<span style="color:#a6e22e">library</span>(reticulate)   <span style="color:#75715e"># for calling the SageMaker Python SDK from R</span>
+<span style="color:#a6e22e">library</span>(purrr)        <span style="color:#75715e"># primarily for parsing the SageMaker responses</span>
+<span style="color:#a6e22e">library</span>(pROC)         <span style="color:#75715e"># for the evaluation of the final model performance</span>
+<span style="color:#a6e22e">library</span>(caret)        <span style="color:#75715e"># for the evaluation of the final model performance</span>
+</code></pre></div><h2 id="exploring-the-data">Exploring the data</h2>
+<p>We start by reading the hotel data into R using <code>read_csv()</code>. We won&rsquo;t do an in-depth data exploration here. Please, refer to the resources linked in the data set section if you are interested in more details on the data itself.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">hotels <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">read_csv</span>(<span style="color:#e6db74">&#39;https://tidymodels.org/start/case-study/hotels.csv&#39;</span>) <span style="color:#f92672">%&gt;%</span>   
+  <span style="color:#a6e22e">mutate_if</span>(is.character, as.factor)
+
+<span style="color:#a6e22e">str</span>(hotels)
+</code></pre></div><pre><code>## tibble [50,000 x 23] (S3: spec_tbl_df/tbl_df/tbl/data.frame)
+##  $ hotel                         : Factor w/ 2 levels &quot;City_Hotel&quot;,&quot;Resort_Hotel&quot;: 1 1 2 2 2 1 2 1 1 1 ...
+##  $ lead_time                     : num [1:50000] 217 2 95 143 136 67 47 56 80 6 ...
+##  $ stays_in_weekend_nights       : num [1:50000] 1 0 2 2 1 2 0 0 0 2 ...
+##  $ stays_in_week_nights          : num [1:50000] 3 1 5 6 4 2 2 3 4 2 ...
+##  $ adults                        : num [1:50000] 2 2 2 2 2 2 2 0 2 2 ...
+##  $ children                      : Factor w/ 2 levels &quot;children&quot;,&quot;none&quot;: 2 2 2 2 2 2 1 1 2 1 ...
+##  $ meal                          : Factor w/ 5 levels &quot;BB&quot;,&quot;FB&quot;,&quot;HB&quot;,..: 1 1 1 3 3 4 1 1 1 1 ...
+##  $ country                       : Factor w/ 155 levels &quot;AGO&quot;,&quot;AIA&quot;,&quot;ALB&quot;,..: 40 120 54 124 120 54 48 48 51 51 ...
+##  $ market_segment                : Factor w/ 7 levels &quot;Aviation&quot;,&quot;Complementary&quot;,..: 6 4 7 7 4 7 4 7 7 7 ...
+##  $ distribution_channel          : Factor w/ 5 levels &quot;Corporate&quot;,&quot;Direct&quot;,..: 4 2 4 4 2 4 2 4 4 4 ...
+##  $ is_repeated_guest             : num [1:50000] 0 0 0 0 0 0 0 0 0 0 ...
+##  $ previous_cancellations        : num [1:50000] 0 0 0 0 0 0 0 0 0 0 ...
+##  $ previous_bookings_not_canceled: num [1:50000] 0 0 0 0 0 0 0 0 0 0 ...
+##  $ reserved_room_type            : Factor w/ 9 levels &quot;A&quot;,&quot;B&quot;,&quot;C&quot;,&quot;D&quot;,..: 1 4 1 1 6 1 3 2 4 1 ...
+##  $ assigned_room_type            : Factor w/ 10 levels &quot;A&quot;,&quot;B&quot;,&quot;C&quot;,&quot;D&quot;,..: 1 10 1 1 6 1 3 1 4 1 ...
+##  $ booking_changes               : num [1:50000] 0 0 2 0 0 0 0 0 0 0 ...
+##  $ deposit_type                  : Factor w/ 3 levels &quot;No_Deposit&quot;,&quot;Non_Refund&quot;,..: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ days_in_waiting_list          : num [1:50000] 0 0 0 0 0 0 0 0 0 0 ...
+##  $ customer_type                 : Factor w/ 4 levels &quot;Contract&quot;,&quot;Group&quot;,..: 4 3 3 3 3 3 3 3 3 3 ...
+##  $ average_daily_rate            : num [1:50000] 80.8 170 8 81 157.6 ...
+##  $ required_car_parking_spaces   : Factor w/ 2 levels &quot;none&quot;,&quot;parking&quot;: 1 1 1 1 1 1 1 1 1 1 ...
+##  $ total_of_special_requests     : num [1:50000] 1 3 2 1 4 1 1 1 1 1 ...
+##  $ arrival_date                  : Date[1:50000], format: &quot;2016-09-01&quot; &quot;2017-08-25&quot; ...
+</code></pre><p>We will train a XGBoost model to predict which actual hotel stays included children and/or babies, and which did not. Our outcome variable children is a factor variable with two levels:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">hotels <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">count</span>(children) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">mutate</span>(prop <span style="color:#f92672">=</span> n<span style="color:#f92672">/</span><span style="color:#a6e22e">sum</span>(n))
+</code></pre></div><pre><code>## # A tibble: 2 x 3
+##   children     n   prop
+##   &lt;fct&gt;    &lt;int&gt;  &lt;dbl&gt;
+## 1 children  4038 0.0808
+## 2 none     45962 0.919
+</code></pre><p>We define the &ldquo;positive&rdquo; class as having children. We see that the data set comes with a huge class imbalance with children only in 8.08% of the reservations. We won&rsquo;t apply any kind of countermeasures like downsampling the majority class or upsampling the minority class but go with data as-is knowing that the machine learning model we will train will most probably learn how to predict the negative case effectively.</p>
+<h2 id="preprocessing-the-data">Preprocessing the data</h2>
+<p>Next, we use a recipe and a couple of <code>dplyr</code> functions to build and a apply a set of preprocessing steps to our data set:</p>
+<ul>
+<li><code>recipe()</code> creates an initial empty recipe using the standard formula method and the data set before we specify the concrete preprocessing steps.</li>
+<li><code>step_date()</code> creates new independent variables for the day of the week, month and the year based on the original date <code>arrival_date</code> column.</li>
+<li><code>step_holiday()</code> creates a set of new dummy variables for specific holidays.</li>
+<li><code>step_rm()</code> removes the original <code>arrival_date</code> variable.</li>
+<li><code>step_zv</code> removes all independent zero variance variables.</li>
+<li><code>step_dummy()</code> one-hot encodes all nominal independent variables into (one or more) numeric binary (0 and 1) variables for the levels of the training data. This is a necessary step when using XGBoost which requires to convert categorical variables into numeric.</li>
+<li><code>prep()</code> returns an updated recipe with the estimates and also the pre-processed data set.</li>
+<li><code>juice()</code> is a shortcut here to extract the preprocessed data set.</li>
+<li><code>mutate()</code> encodes the dependent variable  to have more control on deciding on the &ldquo;positive&rdquo; class (&ldquo;1&rdquo; = children included in the stay) compared to using <code>step_integer()</code> in the recipe flow which does not allow the user to specify the positive/negative class explicitly.</li>
+<li><code>select()</code> moves the dependent variable into the first column of the data frame which is a prerequisite when serving the data later to SageMaker for the training job.</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">holidays <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">c</span>(<span style="color:#e6db74">&#34;AllSouls&#34;</span>, <span style="color:#e6db74">&#34;AshWednesday&#34;</span>, <span style="color:#e6db74">&#34;ChristmasEve&#34;</span>, <span style="color:#e6db74">&#34;Easter&#34;</span>, 
+              <span style="color:#e6db74">&#34;ChristmasDay&#34;</span>, <span style="color:#e6db74">&#34;GoodFriday&#34;</span>, <span style="color:#e6db74">&#34;NewYearsDay&#34;</span>, <span style="color:#e6db74">&#34;PalmSunday&#34;</span>)
+
+hotels_rec <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">recipe</span>(children <span style="color:#f92672">~</span> ., data <span style="color:#f92672">=</span> hotels) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">step_date</span>(arrival_date, features <span style="color:#f92672">=</span> <span style="color:#a6e22e">c</span>(<span style="color:#e6db74">&#34;dow&#34;</span>, <span style="color:#e6db74">&#34;month&#34;</span>, <span style="color:#e6db74">&#34;year&#34;</span>)) <span style="color:#f92672">%&gt;%</span>
+  <span style="color:#a6e22e">step_holiday</span>(arrival_date, holidays <span style="color:#f92672">=</span> holidays) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">step_rm</span>(arrival_date) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">step_zv</span>(<span style="color:#a6e22e">all_predictors</span>()) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">step_dummy</span>(<span style="color:#a6e22e">all_nominal</span>(), <span style="color:#f92672">-</span><span style="color:#a6e22e">all_outcomes</span>(), one_hot <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>) 
+
+hotels_preprocessed <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">prep</span>(hotels_rec, training <span style="color:#f92672">=</span> hotels) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">juice</span>() <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">mutate</span>(
+   children <span style="color:#f92672">=</span> <span style="color:#a6e22e">if_else</span>(children <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;children&#34;</span>, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">0</span>)
+  ) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">select</span>(children, <span style="color:#a6e22e">everything</span>())
+
+<span style="color:#a6e22e">dim</span>(hotels_preprocessed)
+</code></pre></div><pre><code>## [1] 50000   242
+</code></pre><p>Please also note that we were able to apply the recipe to the entire data set before splitting the data because none of our preprocessing steps included a step for calculating statistics like, e.g., standardizing variables. Making dummy variables is not data dependent because it is just an application of a fixed transformation.</p>
+<h2 id="data-splitting">Data splitting</h2>
+<blockquote>
+<p><strong>Info</strong></p>
+<p>The SageMaker built-in XGBoost algorithm will train the ML model on a training data set and use
+a validation set to evaluate the prediction results as the model is trained. We will perform 
+the final model evaluation on a separate hold out test data set.</p>
+</blockquote>
+<p>We will split the data into a training, a validation and a test set using a 70/15/15 split. Because of the class imbalance of the dependent variable we will use stratified random sampling using <code>initial_split()</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">set.seed</span>(<span style="color:#ae81ff">42</span>)
+splits  <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">initial_split</span>(hotels_preprocessed, prop <span style="color:#f92672">=</span> <span style="color:#ae81ff">0.7</span>, strata <span style="color:#f92672">=</span> children)
+hotels_training <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">training</span>(splits)
+hotels_other  <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">testing</span>(splits)
+
+splits  <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">initial_split</span>(hotels_other, prop <span style="color:#f92672">=</span> <span style="color:#ae81ff">0.5</span>, strata <span style="color:#f92672">=</span> children)
+<span style="color:#a6e22e">rm</span>(hotels_other)
+hotels_validation <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">training</span>(splits)
+hotels_test <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">testing</span>(splits)
+</code></pre></div><p>Here we see that stratified random sampling worked as expected:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">hotels_training <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">count</span>(children) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">mutate</span>(prop <span style="color:#f92672">=</span> n<span style="color:#f92672">/</span><span style="color:#a6e22e">sum</span>(n))
+</code></pre></div><pre><code>## # A tibble: 2 x 3
+##   children     n   prop
+##      &lt;dbl&gt; &lt;int&gt;  &lt;dbl&gt;
+## 1        0 32208 0.920 
+## 2        1  2792 0.0798
+</code></pre><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">hotels_validation <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">count</span>(children) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">mutate</span>(prop <span style="color:#f92672">=</span> n<span style="color:#f92672">/</span><span style="color:#a6e22e">sum</span>(n))
+</code></pre></div><pre><code>## # A tibble: 2 x 3
+##   children     n   prop
+##      &lt;dbl&gt; &lt;int&gt;  &lt;dbl&gt;
+## 1        0  6861 0.915 
+## 2        1   639 0.0852
+</code></pre><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">hotels_test <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">count</span>(children) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">mutate</span>(prop <span style="color:#f92672">=</span> n<span style="color:#f92672">/</span><span style="color:#a6e22e">sum</span>(n))
+</code></pre></div><pre><code>## # A tibble: 2 x 3
+##   children     n   prop
+##      &lt;dbl&gt; &lt;int&gt;  &lt;dbl&gt;
+## 1        0  6893 0.919 
+## 2        1   607 0.0809
+</code></pre><p>Now, we will store our pre-processed training, test and validation data sets to disk.</p>
+<blockquote>
+<p><strong>Info</strong></p>
+<p>For training using CSV data the SageMaker built-in XGBoost algorithm expects that the training and 
+validation data sets come with no table headers. The dependent variable must be stored 
+in the first column in the training and validation set.</p>
+<p>For inference using CSV data the SageMaker built-in XGBoost algorithm expects that the test set
+(or any other new data set) comes with no table headers. The CSV data to predict must NOT include 
+the dependent variable.</p>
+</blockquote>
+<p>We follow this standard when storing the data sets in CSV format next. If you remember we already made sure to move the dependent variable <code>chidren</code> to the first column when preprocessing the data.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">dir.create</span>(<span style="color:#e6db74">&#34;../data&#34;</span>)
+<span style="color:#a6e22e">write_csv</span>(hotels_training, <span style="color:#e6db74">&#34;../data/hotels_training.csv&#34;</span>, col_names <span style="color:#f92672">=</span> <span style="color:#66d9ef">FALSE</span>)
+<span style="color:#a6e22e">write_csv</span>(hotels_validation, <span style="color:#e6db74">&#34;../data/hotels_validation.csv&#34;</span>, col_names <span style="color:#f92672">=</span> <span style="color:#66d9ef">FALSE</span>)
+<span style="color:#a6e22e">write_csv</span>(hotels_test <span style="color:#f92672">%&gt;%</span> <span style="color:#a6e22e">select</span>(<span style="color:#f92672">-</span>children), 
+          <span style="color:#e6db74">&#34;../data/hotels_test.csv&#34;</span>, col_names <span style="color:#f92672">=</span> <span style="color:#66d9ef">FALSE</span>)
+</code></pre></div><p>We also store the test set a second time to disk including the dependent variable. We will use this dataset in the next workshop module but not here.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">write_csv</span>(hotels_test, <span style="color:#e6db74">&#34;../data/hotels_test_with_dependent_variable.csv&#34;</span>)
+</code></pre></div><p>Before uploading the pre-processed data sets to S3 let us have a quick look on how to best organize your machine learning when using S3 and SageMaker at scale. If you just interested in finishing your first SageMaker project, you can skip the next section and revisit it later.</p>
+<h2 id="project-organization">Project organization</h2>
+<p>Standardizing your S3 bucket setup is especially useful when you work on multiple data science projects at the same time together with different co-workers. It will also simplify the monitoring of ML model training jobs via the SageMaker console which we will explain in a second. We first describe a general concept to organize your projects before showing how we will use it for the hotels project.</p>
+<p>We recommend to either set up one dedicated S3 bucket for each project or to use the SageMaker default bucket of your region for all of your projects with a dedicated project folder for each individual project. We go with the second option here. SageMaker always uses the following naming schema when creating a default bucket in the specified region of the current user session: sagemaker-[REGION]-[AWS_ACCOUNT_ID.]</p>
+<p>In each project folder you have two sub-folders:</p>
+<ul>
+<li><code>data</code> for storing the training, validation, and test data sets at the project level. If the ML algorithms you will use in the project all require the same preprocessing steps, the data can reside on that level.</li>
+<li><code>models</code> with specific subfolders <em>for every training job</em>. Each of these training job-specific subfolders will store the ML model artifact created during a training job in the <code>output</code> folder and the predictions we get when applying the ML model to the test data set in the <code>predictions</code> folder.</li>
+</ul>
+<p>Each subfolder name underneath <code>models</code> will be a combination of <em>the project name</em>, <em>the applied algorithm</em> during the training job and <em>a timestamp</em> using the following schema [PROJECT_NAME-ALGO_NAME-TIMESTAMP]. This naming schema will give us unique keys to identify training jobs unambiguously also via the SageMaker console. The training job-specific subfolders will be created by SageMaker automatically once the respective training job starts <em>based on the training job name we submit</em>. Therefore, we only need to make sure to specify the name of every SageMaker job  following the [PROJECT_NAME-ALGO_NAME-TIMESTAMP] naming schema and SageMaker will take care of the folder creation and of storing the model artifact once the training job is finished.</p>
+<p>The general organization of all of your projects would look like this:</p>
+<pre><code>sagemaker-[REGION]-[AWS_ACCOUNT_ID]  &lt;-- This is the default SageMaker S3 bucket 
+           |
+           |------[PROJECT_1] 
+           |          |------- data                
+           |          |          |----- [PROJECT_1_TRAINING_SET.csv]
+           |          |          |----- [PROJECT_1_VALIDATION_SET.csv]
+           |          |          |----- [PROJECT_1_TEST_SET.csv]
+           |          |
+           |          |------- models
+           |                     |----- [PROJECT_1_ALGO_NAME_TIMESTAMP]
+           |                     |                |----- output
+           |                     |                |        |----- model.tar.gz
+           |                     |                |                         
+           |                     |                |----- predictions             
+           |                     |                         |----- [PROJECT1_TEST_SET.CSV.OUT]
+           |                     |                  
+           |                     |----- [PROJECT_1_ALGO_NAME_TIMESTAMP]
+           |                     |                |----- output
+           |                     |                |        |----- model.tar.gz
+           |                     |                |                         
+           |                     |                |----- predictions             
+           |                     |                         |----- [PROJECT1_TEST_SET.CSV.OUT]   
+           |                     |----- ...
+           |
+           |------ [PROJECT_2]
+           |          |------- data                
+           |          |          |----- [PROJECT_2_TRAINING_SET.csv]
+           |          |          |----- [PROJECT_2_VALIDATION_SET.csv]
+           |          |          |----- [PROJECT_2_TEST_SET.csv]
+           |          |
+           |          |------- models
+           |                     |----- [PROJECT_2_ALGO_NAME_TIMESTAMP]
+           |                     |                |----- output
+           |                     |                |        |----- model.tar.gz
+           |                     |                |                         
+           |                     |                |----- predictions             
+           |                     |                         |----- [PROJECT2_TEST_SET.CSV.OUT]
+           |                     |                  
+           |                     |----- ...  
+           |
+           |
+           |------ ...
+                                                                             
+</code></pre><p>Organizing our hotel project following these principles leads to the following setup:</p>
+<pre><code>sagemaker-[YOUR_REGION]-[YOUR_AWS_ACCOUNT_ID]  &lt;-- This is your default SageMaker S3 bucket 
+           |
+           |------ hotels
+                     |------- data                
+                     |         |----- hotels_training.csv
+                     |         |----- hotels_validation.csv
+                     |         |----- hotels_test.csv
+                     |
+                     |------- models
+                                |----- [hotels_xgbboost_TIMESTAMP]
+                                                 |----- output
+                                                 |        |----- model.tar.gz
+                                                 |                         
+                                                 |----- predictions             
+                                                          |----- hotels_test.csv.out
+</code></pre><h2 id="uploading-the-data-to-s3">Uploading the data to S3</h2>
+<p>It is finally time to activate the conda environment we prepared and set up in the previous article <em>Configuring RStudio</em> to connect to SageMaker from your RStudio environment.</p>
+<p>We import the SageMaker Python module and create a session object which provides convenient methods for manipulating entities and resources that Amazon SageMaker uses, such as training jobs, endpoints, and input data sets in S3.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">use_condaenv</span>(<span style="color:#e6db74">&#34;sagemaker-r&#34;</span>, required <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>)
+
+sagemaker <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">import</span>(<span style="color:#e6db74">&#34;sagemaker&#34;</span>)
+session <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span><span style="color:#a6e22e">Session</span>()
+</code></pre></div><p>Calling <code>default_bucket()</code> on the SageMaker session object will create the default SageMaker S3 bucket (if the bucket does not exist yet) and return its name to be used by this session. Following the project organization principles from above, we choose <em>hotels</em> as our project name and we further specify the S3 <em>data</em> and <em>models</em> paths.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">bucket <span style="color:#f92672">&lt;-</span> session<span style="color:#f92672">$</span><span style="color:#a6e22e">default_bucket</span>()
+project <span style="color:#f92672">&lt;-</span> <span style="color:#e6db74">&#34;hotels&#34;</span>
+data_path <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(<span style="color:#e6db74">&#34;s3://&#34;</span>, bucket, <span style="color:#e6db74">&#34;/&#34;</span>, project, <span style="color:#e6db74">&#34;/&#34;</span>, <span style="color:#e6db74">&#34;data&#34;</span>)
+models_path <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(<span style="color:#e6db74">&#34;s3://&#34;</span>, bucket, <span style="color:#e6db74">&#34;/&#34;</span>, project, <span style="color:#e6db74">&#34;/&#34;</span>, <span style="color:#e6db74">&#34;models&#34;</span>)
+</code></pre></div><p>Next, we will use the static method <code>upload()</code> from the <code>S3Uploader</code> class to upload our preprocessed data sets to S3. Each upload will return the complete S3 path where the respective uploaded file resides. We need this path information later when telling SageMaker where to fetch the data from when starting the training job and the inference job.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">s3_uploader <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span>s3<span style="color:#f92672">$</span><span style="color:#a6e22e">S3Uploader</span>()
+
+s3_train <span style="color:#f92672">&lt;-</span> s3_uploader<span style="color:#f92672">$</span><span style="color:#a6e22e">upload</span>(local_path <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;../data/hotels_training.csv&#34;</span>, 
+                               desired_s3_uri <span style="color:#f92672">=</span> data_path)
+s3_validation <span style="color:#f92672">&lt;-</span> s3_uploader<span style="color:#f92672">$</span><span style="color:#a6e22e">upload</span>(local_path <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;../data/hotels_validation.csv&#34;</span>,
+                                    desired_s3_uri <span style="color:#f92672">=</span> data_path)
+s3_test <span style="color:#f92672">&lt;-</span> s3_uploader<span style="color:#f92672">$</span><span style="color:#a6e22e">upload</span>(local_path <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;../data/hotels_test.csv&#34;</span>, 
+                              desired_s3_uri <span style="color:#f92672">=</span> data_path)
+</code></pre></div><h2 id="training-the-machine-learning-model">Training the machine learning model</h2>
+<p>Now, it is time to train our first machine learning model. We will use <a href="https://docs.aws.amazon.com/sagemaker/latest/dg/xgboost.html">the built-in XGBoost algorithm</a> to create a ML model for our binary classification problem.</p>
+<h3 id="step-1---create-an-estimator-object">Step 1 - Create an Estimator object</h3>
+<p>Central for training on SageMaker via the API is the Estimator class that represents a high level interface for SageMaker training.</p>
+<blockquote>
+<p><strong>Info</strong></p>
+<p>An Estimator object specifies the core components for almost every SageMaker training job:</p>
+<ol>
+<li>The EC2 training cluster (the type and the number of EC2 instances)</li>
+<li>The location of the ML algorithm docker container image in the Elastic Container Registry</li>
+<li>The hyperparameters that won&rsquo;t be tuned during the training job</li>
+<li>The learning objective</li>
+<li>The evaluation metric for the validation data set</li>
+</ol>
+</blockquote>
+<p><em>Note</em>: Hyperparameters that are tuned during the training job are specified using a separate HyperparameterTuner object. We will have an in-depth look at hyperparameter tuning in the next article of this series.</p>
+<p>Now it is time to create our own Estimator instance with specifying the following parameters in the constructor:</p>
+<ul>
+<li><code>image_name</code>: The location of the SageMaker built-in XGBoost algorithm docker container image in the Elastic Container Registry (ECR). We will use XGBoost version 1.0-1.</li>
+<li><code>role</code>: The AWS Identity and Access Management (IAM) role that SageMaker can assume to perform tasks on your behalf like, e.g.,  fetching data from Amazon S3 buckets and writing the trained model artifacts back to Amazon S3. This is the role we set up and whose Amazon Resource Name (ARN) we stored as a R environment variable in the previous <em>SageMaker fundamentals for R users - Installing the prerequisites</em> article.</li>
+<li><code>train_instance_count</code> and <code>train_instance_type</code>: The type and number of EC2 instances for our training cluster. For our training job we will use a single ml.m5.4xlarge instance. Amazon SageMaker XGBoost currently only trains using CPUs. It is a memory-bound (as opposed to compute-bound) algorithm. So, a general-purpose compute instance like M5 we chose is a better choice than a compute-optimized instance (for example, C4)</li>
+<li><code>train_volume_size</code>: The size, in GB, of the Amazon Elastic Block Store (Amazon EBS) storage volume to attach to the training instance. It is recommended that you have enough total memory in the selected EC2 instances to hold the training data.</li>
+<li><code>output_path</code>: The path to the S3 bucket where Amazon SageMaker stores the training results.</li>
+<li><code>sagemaker_session</code>: The session object that manages interactions with Amazon SageMaker APIs and any other AWS service that the training job uses.</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">region <span style="color:#f92672">&lt;-</span> session<span style="color:#f92672">$</span>boto_region_name
+
+<span style="color:#75715e"># get container image location</span>
+container <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span>image_uris<span style="color:#f92672">$</span><span style="color:#a6e22e">retrieve</span>(framework <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;xgboost&#34;</span>, 
+                                           region <span style="color:#f92672">=</span> region, 
+                                           version <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;1.0-1&#34;</span> )
+
+<span style="color:#75715e"># get SageMaker execution role stored in .Renviron</span>
+role_arn <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">Sys.getenv</span>(<span style="color:#e6db74">&#34;SAGEMAKER_ROLE_ARN&#34;</span>)
+
+<span style="color:#75715e"># Create an Estimator object</span>
+xgb_estimator <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span>estimator<span style="color:#f92672">$</span><span style="color:#a6e22e">Estimator</span>(
+  image_uri <span style="color:#f92672">=</span> container,
+  role <span style="color:#f92672">=</span> role_arn,
+  instance_count <span style="color:#f92672">=</span> <span style="color:#ae81ff">1L</span>,
+  instance_type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;ml.m5.4xlarge&#34;</span>,
+  volume_size <span style="color:#f92672">=</span> <span style="color:#ae81ff">30L</span>,
+  max_run <span style="color:#f92672">=</span> <span style="color:#ae81ff">3600L</span>,
+  output_path <span style="color:#f92672">=</span> models_path,
+  sagemaker_session <span style="color:#f92672">=</span> session
+)
+</code></pre></div><h3 id="step-2---define-the-static-hyperparameters">Step 2 - Define the static hyperparameters</h3>
+<p>Next, we set some of the XGBoost hyperparameters explicitly and will go with <a href="https://docs.aws.amazon.com/sagemaker/latest/dg/xgboost_hyperparameters.html">the default settings</a> for the remaining hyperparameters:</p>
+<ul>
+<li><code>objective</code>: The learning task and learning objective, which is logistic regression for binary classification with probability outputs in our case.</li>
+<li><code>eval_metric</code>: The evaluation metric for the validation data set according to the objective. We will use the area under the curve (AUC).</li>
+<li><code>max_depth</code>: Maximum depth of a tree.</li>
+<li><code>eta</code>: The learning rate.</li>
+<li><code>num_round</code>: The number of rounds for boosting</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">xgb_estimator<span style="color:#f92672">$</span><span style="color:#a6e22e">set_hyperparameters</span>(
+  objective <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;binary:logistic&#34;</span>,
+  eval_metric <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;auc&#34;</span>,
+  max_depth <span style="color:#f92672">=</span> <span style="color:#ae81ff">5L</span>, 
+  eta <span style="color:#f92672">=</span> <span style="color:#ae81ff">0.1</span>,
+  num_round <span style="color:#f92672">=</span> <span style="color:#ae81ff">100L</span>
+)
+</code></pre></div><h3 id="step-3---define-the-s3-location-of-the-data-sets-and-the-training-job-name">Step 3 - Define the S3 location of the data sets and the training job name</h3>
+<p>There are only two things left we need to specify before we can start the training job:</p>
+<ul>
+<li>The S3 location of the training and validation set defined in a single list.</li>
+<li>The training job name which we will set up based on the described <a href="#project-organization">project organization principles</a> above using the 
+[PROJECT_NAME-ALGO_NAME-TIMESTAMP] naming schema.</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#75715e"># Create training job name based project organization principles</span>
+algo <span style="color:#f92672">&lt;-</span> <span style="color:#e6db74">&#34;xgboost&#34;</span>
+timestamp <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">format</span>(<span style="color:#a6e22e">Sys.time</span>(), <span style="color:#e6db74">&#34;%Y-%m-%d-%H-%M-%S&#34;</span>)
+job_name <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste</span>(project, algo, timestamp, sep <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;-&#34;</span>)
+
+s3_train_input <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span>inputs<span style="color:#f92672">$</span><span style="color:#a6e22e">TrainingInput</span>(s3_data <span style="color:#f92672">=</span> s3_train,
+                                     content_type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;csv&#39;</span>)
+s3_valid_input <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span>inputs<span style="color:#f92672">$</span><span style="color:#a6e22e">TrainingInput</span>(s3_data <span style="color:#f92672">=</span> s3_validation,
+                                     content_type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;csv&#39;</span>)
+
+input_data <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">list</span>(<span style="color:#e6db74">&#39;train&#39;</span> <span style="color:#f92672">=</span> s3_train_input,
+                   <span style="color:#e6db74">&#39;validation&#39;</span> <span style="color:#f92672">=</span> s3_valid_input)
+</code></pre></div><h3 id="step-4---start-the-training-job">Step 4 - Start the training job</h3>
+<p>Calling <code>fit()</code> on our Estimator object will start the training process described and shown in <a href="#the-sageMaker-training-process">the image in the SageMaker Training Process section</a>. SageMaker fetches the training and the validation set from S3, obtains a built-in XGBoost algorithm docker container image for ML model training from ECR and pulls it into the newly launched EC2 training cluster that the user specified in the Estimator object. All of this happens fully-managed behind the scenes without further interaction with the user.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">xgb_estimator<span style="color:#f92672">$</span><span style="color:#a6e22e">fit</span>(inputs <span style="color:#f92672">=</span> input_data,
+                  job_name <span style="color:#f92672">=</span> job_name,
+                  wait <span style="color:#f92672">=</span> <span style="color:#66d9ef">FALSE</span>  <span style="color:#75715e"># If set to TRUE, the call will wait until the job completes</span>
+                  )
+</code></pre></div><p>We can check via the API when the training job is finished. Once it has reached the status <strong>Completed</strong> you can move ahead to the next section.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">session<span style="color:#f92672">$</span><span style="color:#a6e22e">describe_training_job</span>(job_name)[[<span style="color:#e6db74">&#34;TrainingJobStatus&#34;</span>]]
+</code></pre></div><pre><code>## [1] &quot;Completed&quot;
+</code></pre><h3 id="step-5---evaluate-the-training-results">Step 5 - Evaluate the training results</h3>
+<p>Once the training job finishes, SageMaker will automatically shut down and terminate the EC2 training cluster. We now check the training results by fetching the training job-specific statistics calling <code>describe_training_job()</code> on the Session object.
+The returned object includes information on the training time, the S3 path to the created stored ML model and the final evaluation metric for the training and the validation set among other information.</p>
+<p>Below we will only parse and check the final evaluation metrics:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">training_job_stats <span style="color:#f92672">&lt;-</span> session<span style="color:#f92672">$</span><span style="color:#a6e22e">describe_training_job</span>(job_name <span style="color:#f92672">=</span> job_name)
+
+final_metrics <span style="color:#f92672">&lt;-</span>  <span style="color:#a6e22e">map_df</span>(training_job_stats<span style="color:#f92672">$</span>FinalMetricDataList, 
+                          <span style="color:#f92672">~</span><span style="color:#a6e22e">tibble</span>(metric_name <span style="color:#f92672">=</span> .x[[<span style="color:#e6db74">&#34;MetricName&#34;</span>]],
+                                  value <span style="color:#f92672">=</span> .x[[<span style="color:#e6db74">&#34;Value&#34;</span>]]))
+final_metrics
+</code></pre></div><pre><code>## # A tibble: 2 x 2
+##   metric_name    value
+##   &lt;chr&gt;          &lt;dbl&gt;
+## 1 validation:auc 0.921
+## 2 train:auc      0.946
+</code></pre><p>The AUC values for the training and the validation set should be &gt;94% and &gt;92% respectively. Based on these first findings the model should be able to generalize well.</p>
+<h2 id="final-model-evaluation">Final model evaluation</h2>
+<p>For the final model evaluation we will use the hold-out test set which we also created and uploaded to S3 earlier. We will use Batch Transform which is a SageMaker feature for generating batch inferences. After that we will use built-in R capabilities to evaluate the results.</p>
+<p>The process of starting a Batch Transform job for doing batch predictions is very similar to the one we used to start and execute the training job. 
+However, instead of an Estimator object we need to use a Transformer object.</p>
+<blockquote>
+<p><strong>Info</strong></p>
+<p>A Transformer object specifies the core components for SageMaker data transforming
+and batch inference jobs:</p>
+<ol>
+<li>The EC2 inference cluster (the type and the number of EC2 instances)</li>
+<li>The name of the ML model residing in S3 that will be used to generate the predictions</li>
+<li>The S3 location of the data set for which we will generate the predictions</li>
+<li>The S3 location where the predictions will be stored</li>
+</ol>
+</blockquote>
+<p>SageMaker executes the following steps automatically once a batch prediction job is started using the <code>transform()</code> function via the API:</p>
+<ol>
+<li>The new EC2 inference cluster comes online.</li>
+<li>The docker container inference image from the SageMaker built-in algorithm that lives in the Elastic Container Registry (ECR) is pulled into the inference cluster. In addition, the data we like to predict AND the model which creates the predictions are transferred from the specified Amazon S3 bucket to the inference cluster.</li>
+<li>Once the batch inference job finishes the predictions are stored in Amazon S3 and the inference cluster comes down.</li>
+</ol>
+<p><img src="images/sagemaker_batch_predictions_small_1.1.png" alt=""></p>
+<h3 id="step-1---create-a-transformer-object">Step 1 - Create a Transformer object</h3>
+<p>We create a Transformer instance, specifying the following parameters in the constructor:</p>
+<ul>
+<li><code>instance_count</code> and <code>instance_type</code>: The type and number of EC2 instances for our inference cluster.</li>
+<li><code>strategy</code>: Determines how records should be batched into each prediction request within the batch transform job. &lsquo;MultiRecord&rsquo; may be faster, but some use cases may require &lsquo;SingleRecord&rsquo;.</li>
+<li><code>assemble_with</code>: Controls the prediction output. &lsquo;None&rsquo; does not perform any special processing, &lsquo;Line&rsquo; places each prediction on its own line.</li>
+<li><code>output_path</code>: The S3 location for storing the prediction results from the batch transform job. The output file will be named with &lsquo;.out&rsquo; suffixed to the input file name. In our case this will be &lsquo;hotels_test.csv.out&rsquo;. Note that multiple batch transform runs will overwrite existing values unless <code>output_path</code> is updated appropriately.</li>
+</ul>
+<p><strong>Note</strong>: Because we derive the Transformer object from the Estimator object it automatically has the information of the ML model residing in S3 that will be used to generate the batch predictions. When instantiating a Transformer from scratch using the constructor we would have explicitly specified the ML model name.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">predictions_path <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(models_path, <span style="color:#e6db74">&#34;/&#34;</span>, job_name, <span style="color:#e6db74">&#34;/predictions&#34;</span>)
+
+xgb_batch_predictor <span style="color:#f92672">&lt;-</span> xgb_estimator<span style="color:#f92672">$</span><span style="color:#a6e22e">transformer</span>(
+  instance_count <span style="color:#f92672">=</span> <span style="color:#ae81ff">1L</span>, 
+  instance_type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;ml.m5.large&#34;</span>, 
+  strategy <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;MultiRecord&#34;</span>,
+  assemble_with <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Line&#34;</span>,
+  output_path <span style="color:#f92672">=</span> predictions_path
+)
+</code></pre></div><h3 id="step-2---start-the-batch-prediction-job">Step 2 - Start the batch prediction job</h3>
+<p>We start our batch prediction job by calling <code>transform()</code> on the Transformer object specifying the following parameters:</p>
+<ul>
+<li><code>data</code>: The S3 path to the test data set. We received the path information when uploading the test data set to S3 earlier.</li>
+<li><code>content_type</code>: MIME type of the test data set.</li>
+<li><code>split_type</code>: Critical parameter to set. Since we are using CSV, we&rsquo;ll specify &lsquo;Line&rsquo;, which ensures we only pass one line at a time to our algorithm for prediction. Had we not specified this, we would attempt to pass all lines in our file, which would exhaust our transformer instance&rsquo;s memory.</li>
+<li><code>job_name</code>: We use the same name for the batch prediction job we already specified for the corresponding training job. That will make it really easy to identify corresponding jobs on the SageMaker training console and the SageMaker batch transform console when being logged in to the AWS Console.</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">xgb_batch_predictor<span style="color:#f92672">$</span><span style="color:#a6e22e">transform</span>(
+  data <span style="color:#f92672">=</span> s3_test, 
+  content_type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;text/csv&#39;</span>,
+  split_type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Line&#34;</span>,
+  job_name <span style="color:#f92672">=</span> job_name,
+  wait <span style="color:#f92672">=</span> <span style="color:#66d9ef">FALSE</span>  <span style="color:#75715e"># If set to TRUE, the call will wait until the job completes</span>
+)
+</code></pre></div><p>We can check via the API when the batch prediction job is finished and the inference cluster is shut and terminated. Once it has reached the status <strong>Completed</strong> you can move ahead to the next section.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">session<span style="color:#f92672">$</span><span style="color:#a6e22e">describe_transform_job</span>(job_name)[[<span style="color:#e6db74">&#34;TransformJobStatus&#34;</span>]]
+</code></pre></div><pre><code>## [1] &quot;Completed&quot;
+</code></pre><h3 id="step-3---download-the-test-set-predictions">Step 3 - Download the test set predictions</h3>
+<p>Next, we will download the prediction results from S3 and store them as a CSV file locally before reading them into a vector. We store the predictions with the actual test set outcomes in a new tibble <code>test_results</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">s3_downloader <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span>s3<span style="color:#f92672">$</span><span style="color:#a6e22e">S3Downloader</span>()
+s3_test_predictions_path <span style="color:#f92672">&lt;-</span> s3_downloader<span style="color:#f92672">$</span><span style="color:#a6e22e">list</span>(predictions_path)
+ 
+<span style="color:#a6e22e">dir.create</span>(<span style="color:#e6db74">&#34;./predictions&#34;</span>)
+s3_downloader<span style="color:#f92672">$</span><span style="color:#a6e22e">download</span>( s3_test_predictions_path, <span style="color:#e6db74">&#34;./predictions&#34;</span>)
+ 
+test_predictions <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">read_csv</span>(<span style="color:#e6db74">&#34;./predictions/hotels_test.csv.out&#34;</span>,
+                              col_names <span style="color:#f92672">=</span> <span style="color:#66d9ef">FALSE</span>) <span style="color:#f92672">%&gt;%</span> 
+   <span style="color:#a6e22e">pull</span>(X1)
+</code></pre></div><pre><code>## Parsed with column specification:
+## cols(
+##   X1 = col_double()
+## )
+</code></pre><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">test_results <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">tibble</span>(
+  truth <span style="color:#f92672">=</span> hotels_test<span style="color:#f92672">$</span>children,
+  predictions <span style="color:#f92672">=</span> test_predictions
+)
+
+<span style="color:#a6e22e">head</span>(test_results)
+</code></pre></div><pre><code>## # A tibble: 6 x 2
+##   truth predictions
+##   &lt;dbl&gt;       &lt;dbl&gt;
+## 1     0     0.0122 
+## 2     0     0.0245 
+## 3     0     0.00490
+## 4     0     0.0379 
+## 5     0     0.0490 
+## 6     0     0.0156
+</code></pre><h3 id="step-4---evaluate-the-test-set-predictions">Step 4 - Evaluate the test set predictions</h3>
+<p>Let us have a look at the ROC curve and the AUC value of the test data set using the <code>pROC</code> package:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">roc_obj <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">roc</span>(test_results<span style="color:#f92672">$</span>truth,test_results<span style="color:#f92672">$</span>predictions,
+               plot <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>,         
+               grid <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>,
+               print.auc <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>,
+               legacy.axes <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>, 
+               main <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;ROC curve for XGBoost classification&#34;</span>,
+               show.thres<span style="color:#f92672">=</span><span style="color:#66d9ef">TRUE</span>,
+               col <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;red2&#34;</span>
+)
+</code></pre></div><pre><code>## Setting levels: control = 0, case = 1
+</code></pre><pre><code>## Setting direction: controls &lt; cases
+</code></pre><p><img src="images/roc_curve-1.png" alt=""><!-- --></p>
+<p>The AUC value of test data set should also be &gt;92% and close to the AUC value from the validation set. That was expected based on the fact that we did not tune any hyperparameters during the training phase.</p>
+<p>Creating a confusion matrix using the <code>caret</code> package we see the following results:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">conf_matrix <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">confusionMatrix</span>(
+  <span style="color:#a6e22e">factor</span>(<span style="color:#a6e22e">ifelse</span>(test_results<span style="color:#f92672">$</span>predictions <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0.5</span>, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">0</span>), levels <span style="color:#f92672">=</span> <span style="color:#a6e22e">c</span>(<span style="color:#e6db74">&#34;0&#34;</span>, <span style="color:#e6db74">&#34;1&#34;</span>), 
+         labels <span style="color:#f92672">=</span> <span style="color:#a6e22e">c</span>(<span style="color:#e6db74">&#34;no children&#34;</span>, <span style="color:#e6db74">&#34;children&#34;</span>)),
+  <span style="color:#a6e22e">factor</span>(test_results<span style="color:#f92672">$</span>truth, levels <span style="color:#f92672">=</span> <span style="color:#a6e22e">c</span>(<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">1</span>), 
+         labels <span style="color:#f92672">=</span> <span style="color:#a6e22e">c</span>(<span style="color:#e6db74">&#34;no children&#34;</span>, <span style="color:#e6db74">&#34;children&#34;</span>)),
+  positive <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;children&#34;</span>)
+conf_matrix
+</code></pre></div><pre><code>## Confusion Matrix and Statistics
+## 
+##              Reference
+## Prediction    no children children
+##   no children        6839      336
+##   children             54      271
+##                                           
+##                Accuracy : 0.948           
+##                  95% CI : (0.9427, 0.9529)
+##     No Information Rate : 0.9191          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.5565          
+##                                           
+##  Mcnemar's Test P-Value : &lt; 2.2e-16       
+##                                           
+##             Sensitivity : 0.44646         
+##             Specificity : 0.99217         
+##          Pos Pred Value : 0.83385         
+##          Neg Pred Value : 0.95317         
+##              Prevalence : 0.08093         
+##          Detection Rate : 0.03613         
+##    Detection Prevalence : 0.04333         
+##       Balanced Accuracy : 0.71931         
+##                                           
+##        'Positive' Class : children        
+## 
+</code></pre><p>Even though you should see an accuracy &gt; 94% for the test set predictions, the model did not perform that well in identifying the &ldquo;positive&rdquo; class (having children). However, that result was expected based on the class imbalance in the original data set which we fairly ignored while preprocessing the data at the beginning.</p>
+<h2 id="summary">Summary</h2>
+<p>In this article we explained the underlying mechanisms of SageMaker training jobs and showcased how to start training jobs using the built-in XGBoost algorithm and using an Estimator object. We used a Transformer object next to start a batch inference job to make test set predictions and highlighted some options to evaluate the final model performance in R. 
+In addition, we proposed some project organization principles you may choose to apply for your own projects.</p>
+<p><a href="../2020-08-16-hyperparameter-tuning">In the next article</a> of this series we will have a deep dive on hyperparameter tuning.</p>
+
+      </div>
+
+      <footer>
+        
+
+
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "alex23lemm-github-io-1" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+    
+     © 2021
+    
+       · 
+      Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+    
+  </section>
+</footer>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/r.min.js"></script>
+<script>
+hljs.configure({languages: []});
+hljs.initHighlightingOnLoad();
+</script>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-55248554-4', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>

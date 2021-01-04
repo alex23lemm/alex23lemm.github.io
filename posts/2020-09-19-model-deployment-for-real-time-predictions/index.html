@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Alex Lemm">
+    <meta name="description" content="Alex Lemm&#39;s personal website">
+    <meta name="keywords" content="blog,analytics,personal,r,datascience,aws">
+
+    <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="SageMaker fundamentals for R users - 04: Model deployment"/>
+<meta name="twitter:description" content="The SageMaker Fundamentals for R users article series is for experienced R users with no prior Amazon SageMaker knowledge, who want to use their own (local) RStudio installation as an alternative to SageMaker Notebooks to connect to SageMaker to train, tune, evaluate, deploy and monitor machine learning models in the cloud.
+In the last article 03 - Hyperparameter tuning we learned how to configure and start a hyperparameter tuning job using the built-in XGBoost algorithm."/>
+
+    <meta property="og:title" content="SageMaker fundamentals for R users - 04: Model deployment" />
+<meta property="og:description" content="The SageMaker Fundamentals for R users article series is for experienced R users with no prior Amazon SageMaker knowledge, who want to use their own (local) RStudio installation as an alternative to SageMaker Notebooks to connect to SageMaker to train, tune, evaluate, deploy and monitor machine learning models in the cloud.
+In the last article 03 - Hyperparameter tuning we learned how to configure and start a hyperparameter tuning job using the built-in XGBoost algorithm." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://alex23lemm.github.io/posts/2020-09-19-model-deployment-for-real-time-predictions/" />
+<meta property="article:published_time" content="2020-09-19T00:00:00+00:00" />
+<meta property="article:modified_time" content="2020-09-19T00:00:00+00:00" />
+
+
+    
+      <base href="https://alex23lemm.github.io/posts/2020-09-19-model-deployment-for-real-time-predictions/">
+    
+    <title>
+  SageMaker fundamentals for R users - 04: Model deployment · alex23lemm
+</title>
+
+    
+      <link rel="canonical" href="https://alex23lemm.github.io/posts/2020-09-19-model-deployment-for-real-time-predictions/">
+    
+
+    <link href="https://fonts.googleapis.com/css?family=Lato:400,700%7CMerriweather:300,700%7CSource+Code+Pro:400,700" rel="stylesheet">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" integrity="sha256-l85OmPOjvil/SOvVt3HnSSjzF1TUMyT9eV0c2BzEGzU=" crossorigin="anonymous" />
+
+    
+      
+      
+      <link rel="stylesheet" href="https://alex23lemm.github.io/css/coder.min.28d751104f30c16da1aa1bb04015cbe662cacfe0d1b01af4f2240ad58580069c.css" integrity="sha256-KNdREE8wwW2hqhuwQBXL5mLKz&#43;DRsBr08iQK1YWABpw=" crossorigin="anonymous" media="screen" />
+    
+
+    
+
+    
+
+    
+
+    
+    
+    <link rel="icon" type="image/png" href="https://alex23lemm.github.io/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://alex23lemm.github.io/images/favicon-16x16.png" sizes="16x16">
+
+    <meta name="generator" content="Hugo 0.80.0" />
+  </head>
+
+  <body class=" ">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://alex23lemm.github.io/">
+      alex23lemm
+    </a>
+    <input type="checkbox" id="menu-toggle" />
+    <label class="menu-button float-right" for="menu-toggle"><i class="fas fa-bars"></i></label>
+    <ul class="navigation-list">
+      
+        
+          <li class="navigation-item">
+            <a class="navigation-link" href="https://alex23lemm.github.io/posts/">Blog</a>
+          </li>
+        
+      
+      
+    </ul>
+  </section>
+</nav>
+<link href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/atom-one-dark-reasonable.min.css" rel="stylesheet">
+
+
+      <div class="content">
+        
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">SageMaker fundamentals for R users - 04: Model deployment</h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fas fa-calendar"></i>
+              <time datetime='2020-09-19T00:00:00Z'>
+                Sep 19, 2020
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fas fa-clock"></i>
+              8 minutes read
+            </span>
+          </div>
+          
+          
+        </div>
+      </header>
+
+      <div>
+        <p>The <strong>SageMaker Fundamentals for R users</strong> article series is for experienced 
+R users with no prior Amazon SageMaker knowledge, who want to use their 
+own (local) RStudio installation as an alternative to SageMaker Notebooks 
+to connect to SageMaker to train, tune, evaluate, deploy and monitor machine 
+learning models in the cloud.</p>
+<p>In the last article <a href="../2020-08-16-hyperparameter-tuning">03 - Hyperparameter tuning</a> we learned how to configure and start a hyperparameter tuning job using the built-in XGBoost algorithm. We started a tuning job to create 30 different XGBoost models based on the hotels data set. We identified and evaluated the best performing model.</p>
+<p><strong>In this fourth article of the series</strong> we will deploy the best performing model as an HTTPS endpoint and make real-time predictions against it. You will learn the different steps of the SageMaker process for <em>deploying a single model that is based on a built-in algorithm behind an endpoint</em>. We won&rsquo;t cover more sophisticated deployment options like endpoints with production variants or multi-model endpoints. Endpoints with production variants allow you to put heterogeneous models, which all serve the same purpose and reside in individual inference containers, behind the same endpoint. Multi-model endpoints allow you to deploy various homogeneous models of the same model type to a single SageMaker inference container which is behind a single endpoint.</p>
+<p>The entire code of this article is also part of a self-paced and fully 
+reproducible workshop that you can <a href="https://github.com/alex23lemm/AWS-SageMaker-Fundamentals-R-Workshop">download from GitHub here</a>.</p>
+<h2 id="the-sagemaker-deployment-process">The SageMaker deployment process</h2>
+<p>The SageMaker deployment process is quite similar to the Batch Transform jobs we covered twice for generating batch inferences on the hold-out test set in the previous two articles. However, unlike Batch Transform jobs, a deployment process won&rsquo;t create a short-lived EC2 inference cluster, but an inference cluster that is online until the user deliberately decides to shut it down.</p>
+<p>SageMaker executes the following steps automatically once a deployment job is started using the <code>create_endpoint()</code> function via the API:</p>
+<ol>
+<li>The new long-lived EC2 inference instances come online based on an endpoint configuration that specifies the ML model, the docker container inference image and the inference configuration.</li>
+<li>The docker container inference image from the SageMaker built-in algorithm that lives in the Elastic Container Registry (ECR) is pulled into EVERY inference instance. In addition, the model which makes the predictions is transferred from the specified Amazon S3 bucket to EVERY inference instance.</li>
+<li>The model endpoint comes live and is ready to serve real-time prediction requests which it passes to one of the inference instances.</li>
+</ol>
+<p>The image below shows the different steps of the deployment process in more detail. In the example we set <code>InitialInstanceCount = 2</code>. AWS recommends to use multiple instances for mission critical endpoints. Instances will automatically be deployed to separate Availability Zones.</p>
+<p><img src="images/sagemaker_deployment.png" alt=""></p>
+<h2 id="preparation">Preparation</h2>
+<p>We assume that you read all previous articles of the <em>SageMaker fundamentals for R users</em> series. In particular, we will deploy the tuned model that you created in the previous article and use the test data set that you saved to your local disk in the second article to make real-time test predictions.</p>
+<h2 id="load-necessary-libraries-and-activate-conda-environment">Load necessary libraries and activate conda environment</h2>
+<p>To use code in this article, you will need to load the following packages:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">library</span>(reticulate)    <span style="color:#75715e"># for calling the SageMaker Python SDK from R</span>
+<span style="color:#a6e22e">library</span>(purrr)         <span style="color:#75715e"># for parsing the SageMaker responses</span>
+<span style="color:#a6e22e">library</span>(readr)         <span style="color:#75715e"># for reading data from disk </span>
+</code></pre></div><p>We activate the conda environment we prepared and set up in the first article 
+<a href="../2020-06-30-connecting-local-rstudio-to-amazon-sagemaker/">01 - Connecting RStudio to SageMaker</a> to connect to SageMaker from your RStudio environment.</p>
+<p>We import the SageMaker Python module and create a session object, which provides convenient methods not just for training and tuning but also for model deployment.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">use_condaenv</span>(<span style="color:#e6db74">&#34;sagemaker-r&#34;</span>, required <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>)
+
+sagemaker <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">import</span>(<span style="color:#e6db74">&#34;sagemaker&#34;</span>)
+session <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span><span style="color:#a6e22e">Session</span>()
+</code></pre></div><h2 id="model-deployment">Model deployment</h2>
+<blockquote>
+<p><strong>Info</strong></p>
+<p>Model deployment is a 3-step process:</p>
+<ol>
+<li>Create a model in SageMaker</li>
+<li>Create an endpoint configuration for an HTTPS endpoint</li>
+<li>Create an HTTPS endpoint</li>
+</ol>
+</blockquote>
+<h3 id="step-1---create-a-model">Step 1 - Create a model</h3>
+<p>Since we already trained the model, we don&rsquo;t need to do it again here. However, it is important that the model we would like to deploy is registered with SageMaker. A registered model&rsquo;s name is one of the key parameters for defining an endpoint configuration in step 2 below. Luckily, we already registered our desired model in the previous article when we called <code>create_model_from_job()</code> on the Session object prior to creating the Transformer object for generating the batch inferences. We only need to fetch the registered model name now.</p>
+<p>Currently, there is not yet a method available in the SageMaker Python SDK to retrieve a list of models that are registered with SageMaker. For this we need use the lower level boto3 client and call <code>list_models()</code> on it. By default, the returned model list is ordered by creation date in descending order. Assuming that the last registered model in your AWS account is the best performing model we trained and registered in the previous article, we go ahead and fetch the top most model name from the list:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">boto_client <span style="color:#f92672">&lt;-</span> session<span style="color:#f92672">$</span>boto_session<span style="color:#f92672">$</span><span style="color:#a6e22e">client</span>(<span style="color:#e6db74">&#34;sagemaker&#34;</span>)
+hotels_model <span style="color:#f92672">&lt;-</span> boto_client<span style="color:#f92672">$</span><span style="color:#a6e22e">list_models</span>()[[<span style="color:#e6db74">&#34;Models&#34;</span>]] <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">map_chr</span>(<span style="color:#e6db74">&#34;ModelName&#34;</span>) <span style="color:#f92672">%&gt;%</span> 
+  .[[1]]
+hotels_model
+</code></pre></div><pre><code>## [1] &quot;hotels-xgb-2020-08-11-23-47-46-022-b279ccc9&quot;
+</code></pre><h3 id="step-2---create-endpoint-configuration">Step 2 - Create endpoint configuration</h3>
+<p>Next, we define and save an endpoint configuration which specifies the ML model we like to use to generate the real-time predictions, the docker container inference image and the inference cluster configuration. We create and save an endpoint configuration in SageMaker by calling <code>create_endpoint_config()</code> on the Session object. An endpoint configuration, once created, can be used in multiple endpoint deployments later.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">config_name <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(hotels_model, <span style="color:#e6db74">&#34;-config&#34;</span>)
+session<span style="color:#f92672">$</span><span style="color:#a6e22e">create_endpoint_config</span>(name <span style="color:#f92672">=</span> config_name,
+                               model_name <span style="color:#f92672">=</span>  hotels_model, 
+                               initial_instance_count <span style="color:#f92672">=</span> <span style="color:#ae81ff">1L</span>, 
+                               instance_type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;ml.m5.large&#34;</span>)
+</code></pre></div><h3 id="step-3---create-endpoint">Step 3 - Create endpoint</h3>
+<p>Now, it is time to finally deploy our current champion model to production. We do this by calling <code>create_endpoint()</code> on the Session object. The parameters we need to specify are the name of the new endpoint, an endpoint configuration and whether or not to wait for the endpoint deployment to complete before returning to the R console. Since endpoint deployment usually takes several minutes, we recommend setting <code>wait = FALSE</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">endpoint_name <span style="color:#f92672">&lt;-</span> <span style="color:#e6db74">&#34;hotels-endpoint&#34;</span>
+session<span style="color:#f92672">$</span><span style="color:#a6e22e">create_endpoint</span>(endpoint_name <span style="color:#f92672">=</span> endpoint_name, 
+                        config_name <span style="color:#f92672">=</span> config_name,
+                        wait <span style="color:#f92672">=</span> <span style="color:#66d9ef">FALSE</span>)
+</code></pre></div><p>We can check via the API when the endpoint is successfully deployed and available. Once its status is <strong>InService</strong> you can move to the next section.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">boto_client<span style="color:#f92672">$</span><span style="color:#a6e22e">describe_endpoint</span>(EndpointName <span style="color:#f92672">=</span> endpoint_name)[[<span style="color:#e6db74">&#34;EndpointStatus&#34;</span>]]
+</code></pre></div><pre><code>## [1] &quot;InService&quot;
+</code></pre><h2 id="make-real-time-predictions-against-the-endpoint">Make real-time predictions against the endpoint</h2>
+<blockquote>
+<p><strong>Info</strong></p>
+<p>SageMaker model endpoints are NOT public web services endpoints. You cannot access 
+an endpoint unless you are already authenticated via the AWS API.</p>
+<p>The endpoint URL does not contain the account ID, but SageMaker determines the account
+ID from the authentication token that is supplied by the caller.</p>
+</blockquote>
+<p>That means that SageMaker endpoints cannot be accessed from the Internet. For instance, if a third-party Shiny application, that uses the <code>httr</code> package in the backend to make API calls, likes to make real-time predictions against your endpoint, it cannot access the endpoint directly.</p>
+<p>Instead, you need to set up an API in Amazon API Gateway, which serves as an additional security layer that provides access to clients from the outside. API Gateway can pass the parameter values to the SageMaker endpoint. The model performs the prediction and returns the predicted value back to API Gateway. API Gateway responds to the client with the predicted value. Setting up an API with API Gateway is beyond the scope of this workshop.</p>
+<p>Here, we won&rsquo;t need to use API Gateway to test the endpoint because we are already authenticated via the AWS API and are able to access the endpoint directly.</p>
+<p>To do this, we need to instantiate the following objects:</p>
+<ul>
+<li>a Predictor object that makes prediction requests to the inference endpoint.</li>
+<li>A Serializer object to encode data for the inference endpoint.</li>
+<li>A Deserializer object to decode data from the inference endpoint.</li>
+</ul>
+<p>The Amazon SageMaker implementation of XGBoost supports CSV and libsvm formats for (real-time) inference. Since we will use CSV data, we instantiate a CSV-Serializer and a CSV-Deserializer object below:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#75715e"># Instantiate CSV-Serializer/CSV-Deserializer objects</span>
+csv_serializer <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span>serializers<span style="color:#f92672">$</span><span style="color:#a6e22e">CSVSerializer</span>()
+csv_serializer<span style="color:#f92672">$</span>CONTENT_TYPE <span style="color:#f92672">&lt;-</span> <span style="color:#e6db74">&#34;text/csv&#34;</span>
+csv_deserializer <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span>deserializers<span style="color:#f92672">$</span><span style="color:#a6e22e">CSVDeserializer</span>()
+
+<span style="color:#75715e"># Instantiate Predictor object</span>
+hotels_predictor <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span>predictor<span style="color:#f92672">$</span><span style="color:#a6e22e">Predictor</span>(
+  endpoint_name <span style="color:#f92672">=</span> endpoint_name, 
+  sagemaker_session <span style="color:#f92672">=</span> session, 
+  serializer <span style="color:#f92672">=</span> csv_serializer,
+  deserializer <span style="color:#f92672">=</span> csv_deserializer)
+</code></pre></div><p>Now, it is time to make real-time predictions against the hotels endpoint. For inference using CSV data the SageMaker built-in XGBoost algorithm expects that the test set (or any other new data set) comes with no table headers. The CSV data to predict must NOT include the dependent variable.</p>
+<p>We will send observations of the test set we saved to disk in <a href="../2020-07-09-training-a-model-with-a-built-in-algorithm">02 - Training a model with a built-in algorithm</a> to the endpoint. When we saved the test set, we made sure to remove the table header and the column of the dependent variable.</p>
+<p>Below we send the first 5 observations all at once to the inference endpoint by calling <code>predict()</code> on the Predictor object. SageMaker endpoints support mini-batches for real-time inference requests.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">test_set <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">read_csv</span>(<span style="color:#e6db74">&#34;../data/hotels_test.csv&#34;</span>, col_names <span style="color:#f92672">=</span> <span style="color:#66d9ef">FALSE</span>, n_max <span style="color:#f92672">=</span> <span style="color:#ae81ff">5</span>) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">as.matrix</span>()
+
+real_time_predictions <span style="color:#f92672">&lt;-</span> hotels_predictor<span style="color:#f92672">$</span><span style="color:#a6e22e">predict</span>(data <span style="color:#f92672">=</span> test_set) <span style="color:#f92672">%&gt;%</span> 
+  .[[1]] <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">as.numeric</span>()
+</code></pre></div><p>Next, we like to check if the endpoint produced the correct predictions. To do this, we compare the real-time prediction results with the Batch Transform predictions of the test set we calculated and saved in the previous article <a href="../2020-08-16-hyperparameter-tuning">03 - Hyperparameter tuning</a>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">batch_predictions <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">read_csv</span>(<span style="color:#e6db74">&#34;../03_Model_tuning/predictions/hotels_test.csv.out&#34;</span>, 
+                              col_names <span style="color:#f92672">=</span> <span style="color:#66d9ef">FALSE</span>, n_max <span style="color:#f92672">=</span> <span style="color:#ae81ff">5</span>) <span style="color:#f92672">%&gt;%</span> 
+  .[[1]]
+  
+<span style="color:#a6e22e">data.frame</span>(real_time_predictions, batch_predictions)
+</code></pre></div><pre><code>##   real_time_predictions batch_predictions
+## 1           0.007300874       0.007300874
+## 2           0.017646877       0.017646877
+## 3           0.004776326       0.004776326
+## 4           0.034522254       0.034522254
+## 5           0.031237641       0.031237641
+</code></pre><p>The prediction results match and we can conclude that the endpoint we deployed works as expected.</p>
+<p>Once a real-time inference endpoint reaches the end of its life cycle, you can either delete it via the SageMaker Console or the API, which we do next. This also ensures that the inference instance is not causing any additional costs.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">session<span style="color:#f92672">$</span><span style="color:#a6e22e">delete_endpoint</span>(endpoint_name)
+</code></pre></div><h2 id="summary">Summary</h2>
+<p>In this article we explained the underlying mechanisms of the SageMaker model deployment process. You learned how to manage an endpoint life cycle  from configuring, deploying and deleting an HTTPS endpoint for a model using the Session object. You then used a Predictor object to make real-time predictions against the endpoint.</p>
+
+      </div>
+
+      <footer>
+        
+
+
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "alex23lemm-github-io-1" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+    
+     © 2021
+    
+       · 
+      Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+    
+  </section>
+</footer>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/r.min.js"></script>
+<script>
+hljs.configure({languages: []});
+hljs.initHighlightingOnLoad();
+</script>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-55248554-4', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>

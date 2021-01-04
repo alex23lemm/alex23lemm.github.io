@@ -4,17 +4,37 @@
   
   <url>
     <loc>https://alex23lemm.github.io/</loc>
-    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+    <lastmod>2020-09-19T00:00:00+00:00</lastmod>
   </url>
   
   <url>
     <loc>https://alex23lemm.github.io/posts/</loc>
-    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+    <lastmod>2020-09-19T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://alex23lemm.github.io/posts/2020-09-19-model-deployment-for-real-time-predictions/</loc>
+    <lastmod>2020-09-19T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://alex23lemm.github.io/posts/2020-08-16-hyperparameter-tuning/</loc>
+    <lastmod>2020-08-16T00:00:00+00:00</lastmod>
   </url>
   
   <url>
     <loc>https://alex23lemm.github.io/posts/2020-07-12-using-amazon-rekognition-from-r/</loc>
     <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://alex23lemm.github.io/posts/2020-07-09-training-a-model-with-a-built-in-algorithm/</loc>
+    <lastmod>2020-07-09T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://alex23lemm.github.io/posts/2020-06-30-connecting-local-rstudio-to-amazon-sagemaker/</loc>
+    <lastmod>2020-06-30T00:00:00+00:00</lastmod>
   </url>
   
   <url>

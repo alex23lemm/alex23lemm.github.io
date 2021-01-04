@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Alex Lemm">
+    <meta name="description" content="Alex Lemm&#39;s personal website">
+    <meta name="keywords" content="blog,analytics,personal,r,datascience,aws">
+
+    <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="SageMaker fundamentals for R users - 03: Hyperparameter tuning"/>
+<meta name="twitter:description" content="The SageMaker Fundamentals for R users article series is for experienced R users with no prior Amazon SageMaker knowledge, who want to use their own (local) RStudio installation as an alternative to SageMaker Notebooks to connect to SageMaker to train, tune, evaluate, deploy and monitor machine learning models in the cloud.
+In the last article of the series 02 - Training a model with a built-in algorithm we showed how to configure and start a single training job with static hyperparameters using the built-in XGBoost algorithm to solve a binary classification problem."/>
+
+    <meta property="og:title" content="SageMaker fundamentals for R users - 03: Hyperparameter tuning" />
+<meta property="og:description" content="The SageMaker Fundamentals for R users article series is for experienced R users with no prior Amazon SageMaker knowledge, who want to use their own (local) RStudio installation as an alternative to SageMaker Notebooks to connect to SageMaker to train, tune, evaluate, deploy and monitor machine learning models in the cloud.
+In the last article of the series 02 - Training a model with a built-in algorithm we showed how to configure and start a single training job with static hyperparameters using the built-in XGBoost algorithm to solve a binary classification problem." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://alex23lemm.github.io/posts/2020-08-16-hyperparameter-tuning/" />
+<meta property="article:published_time" content="2020-08-16T00:00:00+00:00" />
+<meta property="article:modified_time" content="2020-08-16T00:00:00+00:00" />
+
+
+    
+      <base href="https://alex23lemm.github.io/posts/2020-08-16-hyperparameter-tuning/">
+    
+    <title>
+  SageMaker fundamentals for R users - 03: Hyperparameter tuning · alex23lemm
+</title>
+
+    
+      <link rel="canonical" href="https://alex23lemm.github.io/posts/2020-08-16-hyperparameter-tuning/">
+    
+
+    <link href="https://fonts.googleapis.com/css?family=Lato:400,700%7CMerriweather:300,700%7CSource+Code+Pro:400,700" rel="stylesheet">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" integrity="sha256-l85OmPOjvil/SOvVt3HnSSjzF1TUMyT9eV0c2BzEGzU=" crossorigin="anonymous" />
+
+    
+      
+      
+      <link rel="stylesheet" href="https://alex23lemm.github.io/css/coder.min.28d751104f30c16da1aa1bb04015cbe662cacfe0d1b01af4f2240ad58580069c.css" integrity="sha256-KNdREE8wwW2hqhuwQBXL5mLKz&#43;DRsBr08iQK1YWABpw=" crossorigin="anonymous" media="screen" />
+    
+
+    
+
+    
+
+    
+
+    
+    
+    <link rel="icon" type="image/png" href="https://alex23lemm.github.io/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://alex23lemm.github.io/images/favicon-16x16.png" sizes="16x16">
+
+    <meta name="generator" content="Hugo 0.80.0" />
+  </head>
+
+  <body class=" ">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://alex23lemm.github.io/">
+      alex23lemm
+    </a>
+    <input type="checkbox" id="menu-toggle" />
+    <label class="menu-button float-right" for="menu-toggle"><i class="fas fa-bars"></i></label>
+    <ul class="navigation-list">
+      
+        
+          <li class="navigation-item">
+            <a class="navigation-link" href="https://alex23lemm.github.io/posts/">Blog</a>
+          </li>
+        
+      
+      
+    </ul>
+  </section>
+</nav>
+<link href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/atom-one-dark-reasonable.min.css" rel="stylesheet">
+
+
+      <div class="content">
+        
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">SageMaker fundamentals for R users - 03: Hyperparameter tuning</h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fas fa-calendar"></i>
+              <time datetime='2020-08-16T00:00:00Z'>
+                Aug 16, 2020
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fas fa-clock"></i>
+              17 minutes read
+            </span>
+          </div>
+          
+          
+        </div>
+      </header>
+
+      <div>
+        <p>The <strong>SageMaker Fundamentals for R users</strong> article series is for experienced 
+R users with no prior Amazon SageMaker knowledge, who want to use their 
+own (local) RStudio installation as an alternative to SageMaker Notebooks 
+to connect to SageMaker to train, tune, evaluate, deploy and monitor machine 
+learning models in the cloud.</p>
+<p>In the last article of the series <a href="../2020-07-09-training-a-model-with-a-built-in-algorithm">02 - Training a model with a built-in algorithm</a> we showed how to configure and start <em>a single training job with static hyperparameters</em> using the built-in XGBoost algorithm to solve a binary classification problem. Single training jobs in SageMaker cannot include tunable hyperparameters.</p>
+<p><strong>In this third article of the series</strong> we will continue to use the hotels example project. This time you will learn how to configure and start <em>a hyperparameter tuning job with static and tunable hyperparameters</em> using the built-in XGBoost algorithm. Typically, a hyperparameter tuning job executes multiple training jobs. Along the way we have a closer look at the underlying mechanisms of SageMaker hyperparameter tuning jobs.</p>
+<p>The entire code of this article is also part of a self-paced and fully 
+reproducible workshop that you can <a href="https://github.com/alex23lemm/AWS-SageMaker-Fundamentals-R-Workshop">download from GitHub here</a>.</p>
+<h2 id="introduction">Introduction</h2>
+<p>We assume that you read the previous article on training a single model with the built-in XGBoost algorithm and that you you uploaded the pre-processed training, validation and test datasets to S3 having followed the defined path and folder structure. We won&rsquo;t repeat the data exploration steps here but focus on configuring and starting a hyperparameter tuning job based on the preprocessed and uploaded data.</p>
+<h2 id="load-necessary-libraries">Load necessary libraries</h2>
+<p>To use code in this article, you will need to install and load the following packages:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">library</span>(reticulate)    <span style="color:#75715e"># for calling the SageMaker Python SDK from R</span>
+<span style="color:#a6e22e">library</span>(purrr)         <span style="color:#75715e"># for parsing the SageMaker responses</span>
+<span style="color:#a6e22e">library</span>(dplyr)         <span style="color:#75715e"># for processing the SageMaker responses</span>
+<span style="color:#a6e22e">library</span>(ggplot2)       <span style="color:#75715e"># for visualizing the tuning job results</span>
+<span style="color:#a6e22e">library</span>(viridis)       <span style="color:#75715e"># provides color palettes that are easy to read by those with colorblindness</span>
+<span style="color:#a6e22e">library</span>(readr)         <span style="color:#75715e"># for reading the test set from disk </span>
+<span style="color:#a6e22e">library</span>(pROC)          <span style="color:#75715e"># for the evaluation of the final model performance</span>
+<span style="color:#a6e22e">library</span>(caret)         <span style="color:#75715e"># for the evaluation of the final model performance</span>
+</code></pre></div><h2 id="preparation">Preparation</h2>
+<p>We activate the conda environment we prepared and set up in the first article <a href="../2020-06-30-connecting-local-rstudio-to-amazon-sagemaker/">01 - Connecting RStudio to SageMaker</a> to connect to SageMaker from your RStudio environment.</p>
+<p>We import the SageMaker Python module and create a session object which provides convenient methods for manipulating entities and resources that Amazon SageMaker uses, such as training jobs, endpoints, and input data sets in S3.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">use_condaenv</span>(<span style="color:#e6db74">&#34;sagemaker-r&#34;</span>, required <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>)
+
+sagemaker <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">import</span>(<span style="color:#e6db74">&#34;sagemaker&#34;</span>)
+session <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span><span style="color:#a6e22e">Session</span>()
+</code></pre></div><p>Calling <code>default_bucket()</code> on the SageMaker session object returns the name of the default SageMaker bucket we created during the initial setup in the first article of this series. We choose <em>hotels</em> as our project name and we further specify the S3 <em>data</em> and <em>models</em> paths we also used earlier.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">bucket <span style="color:#f92672">&lt;-</span> session<span style="color:#f92672">$</span><span style="color:#a6e22e">default_bucket</span>()
+project <span style="color:#f92672">&lt;-</span>  <span style="color:#e6db74">&#34;hotels&#34;</span>
+data_path <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(project, <span style="color:#e6db74">&#34;/&#34;</span>, <span style="color:#e6db74">&#34;data&#34;</span>)
+models_path <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(<span style="color:#e6db74">&#34;s3://&#34;</span>, bucket, <span style="color:#e6db74">&#34;/&#34;</span>, project, <span style="color:#e6db74">&#34;/&#34;</span>, <span style="color:#e6db74">&#34;models&#34;</span>)
+</code></pre></div><p>Next, we retrieve the paths to the datasets we uploaded to S3 in the second article. We need this information later when telling SageMaker where to fetch the data from when starting the hyperparameter tuning job and the inference job.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">data_s3_location <span style="color:#f92672">&lt;-</span> session<span style="color:#f92672">$</span><span style="color:#a6e22e">list_s3_files</span>(bucket, data_path)
+data_s3_location
+</code></pre></div><pre><code>## [1] &quot;hotels/data/hotels_test.csv&quot;       &quot;hotels/data/hotels_training.csv&quot;  
+## [3] &quot;hotels/data/hotels_validation.csv&quot;
+</code></pre><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">s3_train <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(<span style="color:#e6db74">&#34;s3://&#34;</span>, bucket, <span style="color:#e6db74">&#34;/&#34;</span>, <span style="color:#e6db74">&#34;hotels/data/hotels_training.csv&#34;</span>)
+s3_validation <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(<span style="color:#e6db74">&#34;s3://&#34;</span>, bucket, <span style="color:#e6db74">&#34;/&#34;</span>, <span style="color:#e6db74">&#34;hotels/data/hotels_validation.csv&#34;</span>)
+s3_test <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(<span style="color:#e6db74">&#34;s3://&#34;</span>, bucket, <span style="color:#e6db74">&#34;/&#34;</span>, <span style="color:#e6db74">&#34;hotels/data/hotels_test.csv&#34;</span>)
+</code></pre></div><h2 id="training-and-tuning-the-machine-model">Training and tuning the machine model</h2>
+<p>In this section we first examine the underlying mechanisms of SageMaker hyperparameter tuning jobs before configuring and starting a tuning job based on the data from the hotels project.</p>
+<h3 id="the-sagemaker-hyperparameter-tuning-process">The SageMaker hyperparameter tuning process</h3>
+<p>In regards to the underlying infrastructure provisioning, the hyperparameter tuning process in SageMaker is very similar to the training process for a single model we covered in <a href="../2020-07-09-training-a-model-with-a-built-in-algorithm">02 - Training a model with a built-in algorithm</a>.</p>
+<p>Every hyperparameter tuning job has its own short-lived EC2 training cluster. The cluster consists of one or more EC2 instances, whose type and number you specify. The EC2 training cluster is only live for the number of seconds the models are trained and will come down immediately after the hyperparameter tuning job is finished.</p>
+<p>The three major differences between single training jobs and hyperparameter tuning jobs are the following:</p>
+<ul>
+<li>A hyperparameter tuning job is defined by specifying static AND tunable hyperparameters.</li>
+<li>A hyperparameter tuning job will execute MULTIPLE training jobs while searching for the optimal values of the tunable hyperparameters. The search for the optimal hyperparameters depends on the defined tuning method (aka optimization algorithm).</li>
+<li>Hyperparameter tuning jobs are defined using an Estimator object AND a HyperparameterTuner object. The HyperparameterTuner object starts the hyperparameter tuning job.</li>
+</ul>
+<p>SageMaker supports two tuning methods: Bayesian optimization which is the default tuning method and random search. Grid search that you might be familiar with from using the <code>caret</code> or the <code>mlr</code> package is not supported by SageMaker. In this article we will use Bayesian optimization as the tuning method.</p>
+<p>The image below shows the different steps of a hyperparameter tuning job in more detail.</p>
+<p><img src="images/sagemaker_tuning_small_1.0.png" alt=""></p>
+<p>A hyperparameter job is started calling the <code>fit()</code> function via the API. The following parameters which you pass to <code>fit()</code> as part of the job configuration will determine the infrastructure setup of the short-lived training cluster:</p>
+<ul>
+<li><code>instance_type</code> and <code>instance count</code>: Define the type of the EC2 instance and the number of EC2 instances used for a single training job as part of the hyperparameter tuning process.</li>
+<li><code>max_jobs</code>: Determines the maximum number of training jobs that will be executed.</li>
+<li><code>max_parallel_job</code>: The number of training jobs that will be executed in parallel.</li>
+</ul>
+<blockquote>
+<p><strong>Info</strong></p>
+<p>Since each training job requires <code>instance_count</code> number of instances, the number of instances
+running concurrently is equal to <code>instance_count</code> multipled by <code>max_parallel_job</code>.</p>
+</blockquote>
+<p>SageMaker executes the following steps automatically once a hyperparameter job is started calling <code>fit()</code>:</p>
+<ol>
+<li>
+<p>The new EC2 training cluster comes online. In the example in the image the hyperparameter tuning job configuration defines one ml.m5.xlarge instance (<code>instance_type = &quot;ml.m5.xlarge</code>, <code>instance_count = 1</code>) for a SINGLE training job. Because we decide to execute three training jobs in parallel per tuning round (<code>max_parallel_jobs = 3</code>), the short-lived training cluster will be started with 3 ml.m5.xlarge EC2 instances.</p>
+</li>
+<li>
+<p>The Docker container training image from the SageMaker built-in algorithm that lives in the Elastic Container Registry (ECR) is pulled into EVERY training instance of the training cluster AND the training and validation data sets are transferred from the specified Amazon S3 bucket to EVERY training instance of the training cluster.</p>
+</li>
+<li>
+<p>Because we specified to run nine training jobs in total (<code>max_jobs = 9</code>) with three training jobs executed in parallel (<code>max_parallel = 3</code>), we will have three training rounds. Every round each of our three ml.m5.xlarge EC2 instances will be fed with a different hyperparameter setting.</p>
+<ol>
+<li><em>Round 1/3</em>: Three training jobs are executed with each job using a different hyperparameter setting. After the three training jobs finish, the trained machine learning models are stored in a S3 bucket. In addition, the results of the objective metric performance (e.g. AUC scores of the validation test sets in case of a binary classification problem) are pulled into the Bayesian optimizer.</li>
+<li><em>Round 2/3</em>: The Bayesian optimizer starts three new training jobs with each job using a new hyperparameter setting. After the three training jobs finish, the trained machine learning models are stored in a S3 bucket. In addition, the results of the objective metric performance are pulled into the Bayesian optimizer.</li>
+<li><em>Round 3/3</em>: The Bayesian optimizer starts the final round with three new training jobs and each job using a  new hyperparameter setting. After the three training jobs finish, the trained machine learning models are stored in a S3 bucket. The short-lived training cluster is shut down.</li>
+</ol>
+</li>
+</ol>
+<p>Having gained a solid understanding of the underlying fundamentals of SageMaker hyperparameter tuning jobs, we will now configure and start a tuning job ourselves.</p>
+<h3 id="step-1---create-an-estimator-object">Step 1 - Create an Estimator object</h3>
+<p>The first of two essential objects for hyperparameter tuning on SageMaker via the API is an Estimator object.</p>
+<blockquote>
+<p><strong>Info</strong></p>
+<p>An Estimator object specifies the core components for single training jobs that are part of a
+hyperparameter tuning job:</p>
+<ol>
+<li>The type and the number of EC2 instance for the training job.</li>
+<li>The location of the ML algorithm docker container image in the Elastic Container Registry.</li>
+<li>The static hyperparameters that won&rsquo;t be tuned during the training job.</li>
+<li>The learning objective.</li>
+</ol>
+</blockquote>
+<p><em>Note</em>: Unlike for single training jobs, the evaluation metric for the validation data set won&rsquo;t be defined in the Estimator object but in the HyperparameterTuner object later.</p>
+<p>We create our own Estimator instance, specifying the following parameters in the constructor:</p>
+<ul>
+<li><code>image_name</code>: The location of the SageMaker built-in XGBoost algorithm docker container image in the Elastic Container Registry (ECR). We will use XGBoost version 1.0-1.</li>
+<li><code>role</code>: The AWS Identity and Access Management (IAM) role that SageMaker can assume to perform tasks on your behalf like, e.g.,  fetching data from Amazon S3 buckets and writing the trained model artifacts back to Amazon S3. This is the role we set up and whose Amazon Resource Name (ARN) we stored as a R environment variable in <a href="../2020-06-30-connecting-local-rstudio-to-amazon-sagemaker/">01 - Connecting RStudio to SageMaker</a>.</li>
+<li><code>train_instance_count</code> and <code>train_instance_type</code>: The type and number of EC2 instances that together represent a training instance of our training cluster to execute a SINGLE training job. We use two ml.m5.4xlarge instances.</li>
+<li><code>train_volume_size</code>: The size, in GB, of the Amazon Elastic Block Store (Amazon EBS) storage volume to attach to the training instance. It is recommended that you have enough total memory in the selected EC2 instances to hold the training data.</li>
+<li><code>output_path</code>: The path to the S3 bucket where Amazon SageMaker stores the training results.</li>
+<li><code>sagemaker_session</code>: The session object that manages interactions with Amazon SageMaker APIs and any other AWS service that the training job uses.</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">region <span style="color:#f92672">&lt;-</span> session<span style="color:#f92672">$</span>boto_region_name
+
+<span style="color:#75715e"># get container image location</span>
+container <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span>image_uris<span style="color:#f92672">$</span><span style="color:#a6e22e">retrieve</span>(framework <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;xgboost&#34;</span>, 
+                                           region <span style="color:#f92672">=</span> region, 
+                                           version <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;1.0-1&#34;</span> )
+
+<span style="color:#75715e"># get SageMaker execution role stored in .Renviron</span>
+role_arn <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">Sys.getenv</span>(<span style="color:#e6db74">&#34;SAGEMAKER_ROLE_ARN&#34;</span>)
+
+<span style="color:#75715e"># Create an Estimator object</span>
+xgb_estimator <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span>estimator<span style="color:#f92672">$</span><span style="color:#a6e22e">Estimator</span>(
+  image_uri <span style="color:#f92672">=</span> container,
+  role <span style="color:#f92672">=</span> role_arn,
+  instance_count <span style="color:#f92672">=</span> <span style="color:#ae81ff">1L</span>,
+  instance_type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;ml.m5.12xlarge&#34;</span>,
+  volume_size <span style="color:#f92672">=</span> <span style="color:#ae81ff">30L</span>,
+  max_run <span style="color:#f92672">=</span> <span style="color:#ae81ff">3600L</span>,
+  output_path <span style="color:#f92672">=</span> models_path,
+  sagemaker_session <span style="color:#f92672">=</span> session
+)
+</code></pre></div><h3 id="step-2---define-the-static-hyperparameters">Step 2 - Define the static hyperparameters</h3>
+<p>Next, we set the static hyperparameters of the XGBoost algorithm that won&rsquo;t be tuned by calling <code>set_hyperparameters()</code> on the Estimator object:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">xgb_estimator<span style="color:#f92672">$</span><span style="color:#a6e22e">set_hyperparameters</span>(
+  objective <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;binary:logistic&#34;</span>,
+  min_child_weight <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span> 
+)
+</code></pre></div><h3 id="step-3---define-the-tunable-hyperparameters">Step 3 - Define the tunable hyperparameters</h3>
+<p>Now, it is time to define the hyperparameters that are tuned during the execution of the tuning job.</p>
+<blockquote>
+<p><strong>Info</strong></p>
+<p>For every tunable hyperparameter you specify the range of values to search over. Available 
+hyperparameter range types are categorical ranges, integer ranges and continuous ranges.</p>
+<p>For integer and continuous hyperparameter ranges you can further specify the scaling type
+to use to search the range of values.</p>
+</blockquote>
+<p><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/automatic-model-tuning-define-ranges.html#scaling-type">Available scaling types</a> are auto (default), linear, logarithmic, and reverse logarithmic. Logarithmic scaling only works for ranges that have values greater than 0. When selecting automatic scaling, SageMaker uses log scaling or reverse logarithmic scaling whenever the appropriate choice is clear from the hyperparameter ranges.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">hyperparameter_ranges <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">list</span>(
+  num_round <span style="color:#f92672">=</span> sagemaker<span style="color:#f92672">$</span>tuner<span style="color:#f92672">$</span><span style="color:#a6e22e">IntegerParameter</span>(<span style="color:#ae81ff">100L</span>, <span style="color:#ae81ff">1000L</span>),
+  max_depth <span style="color:#f92672">=</span> sagemaker<span style="color:#f92672">$</span>tuner<span style="color:#f92672">$</span><span style="color:#a6e22e">IntegerParameter</span>(<span style="color:#ae81ff">1L</span>, <span style="color:#ae81ff">10L</span>),
+  eta <span style="color:#f92672">=</span> sagemaker<span style="color:#f92672">$</span>tuner<span style="color:#f92672">$</span><span style="color:#a6e22e">ContinuousParameter</span>(<span style="color:#ae81ff">00.1</span>, <span style="color:#ae81ff">0.5</span>, <span style="color:#e6db74">&#34;Logarithmic&#34;</span>)
+)
+</code></pre></div><p>We go with <a href="https://docs.aws.amazon.com/sagemaker/latest/dg/xgboost_hyperparameters.html">the default settings</a> for the remaining hyperparameters.</p>
+<h3 id="step-4---create-an-hyperparametertuner-object">Step 4 - Create an HyperparameterTuner object</h3>
+<p>Next we create a HyperparameterTuner object which is the second of the two central objects for hyperparameter tuning on SageMaker via the API.</p>
+<blockquote>
+<p><strong>Info</strong></p>
+<p>A HyperparameterTuner object specifies the core components of a hyperparameter tuning job:</p>
+<ol>
+<li>The objective metric for evaluating training jobs</li>
+<li>The ranges of the tunable hyperparameters that are searched</li>
+<li>The tuning method (aka optimization algorithm)</li>
+<li>The maximum total number of training jobs to start</li>
+<li>The maximum number of parallel training jobs to start</li>
+</ol>
+</blockquote>
+<p>We create a HyperParameterTuner instance, specifying the following parameters in the constructor:</p>
+<ul>
+<li><code>estimator</code>: The estimator object we created that includes the training job configuration.</li>
+<li><code>objective_metric_name</code>: We select <code>validation:auc</code>, the area under the curve calculated for the validation set, as the metric for evaluating the training jobs.</li>
+<li><code>hyperparameter_ranges</code>: The list of tunable hyperparameter ranges we specified in the step before.</li>
+<li><code>strategy</code>: The tuning method, in this case &ldquo;Bayesian&rdquo;.</li>
+<li><code>objective_type</code>: The type of the objective metric for evaluating training jobs which is either &ldquo;Maximum&rdquo; or &ldquo;Minimum&rdquo;. Since our objective metric is <code>validation:auc</code> we set the parameter to &ldquo;Maximum&rdquo;.</li>
+<li><code>max_jobs</code>: We decide to start 30 training jobs in total.</li>
+<li><code>max_parallel_jobs</code>: Three training jobs start in parallel in each round.</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">tuner <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span>tuner<span style="color:#f92672">$</span><span style="color:#a6e22e">HyperparameterTuner</span>(
+  estimator <span style="color:#f92672">=</span> xgb_estimator,
+  objective_metric_name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;validation:auc&#34;</span>,
+  hyperparameter_ranges <span style="color:#f92672">=</span> hyperparameter_ranges, 
+  strategy <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Bayesian&#34;</span>,
+  objective_type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Maximize&#34;</span>,
+  max_jobs <span style="color:#f92672">=</span> <span style="color:#ae81ff">30L</span>,
+  max_parallel_jobs <span style="color:#f92672">=</span> <span style="color:#ae81ff">3L</span>
+)
+</code></pre></div><p>Based on the configuration of the Estimator object and the HyperparameterTuner object, we will start 30 training jobs in total with 3 training jobs starting in parallel in each tuning round. We will have 10 rounds in total. The training cluster will be launched with three ml.m5.12xlarge instances with each instance executing 10 training jobs consecutively.</p>
+<h3 id="step-5---define-the-s3-location-of-the-data-sets-and-the-tuning-job-name">Step 5 - Define the S3 location of the data sets and the tuning job name</h3>
+<p>There are only two things left we need to specify before we can start the tuning job:</p>
+<ul>
+<li>The S3 location of the training and validation set defined in a single list.</li>
+<li>The tuning job name which we will set up using the [PROJECT_NAME-ALGO_NAME-TIMESTAMP] naming schema.</li>
+</ul>
+<p><em>Note</em>: At the time of writing a tuner job name is restricted to 32 letters.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">algo <span style="color:#f92672">&lt;-</span> <span style="color:#e6db74">&#34;xgb&#34;</span>
+timestamp <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">format</span>(<span style="color:#a6e22e">Sys.time</span>(), <span style="color:#e6db74">&#34;%Y-%m-%d-%H-%M-%S&#34;</span>)
+job_name <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste</span>(project, algo, timestamp, sep <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;-&#34;</span>)
+
+s3_train_input <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span>inputs<span style="color:#f92672">$</span><span style="color:#a6e22e">TrainingInput</span>(s3_data <span style="color:#f92672">=</span> s3_train,
+                                     content_type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;csv&#39;</span>)
+s3_valid_input <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span>inputs<span style="color:#f92672">$</span><span style="color:#a6e22e">TrainingInput</span>(s3_data <span style="color:#f92672">=</span> s3_validation,
+                                     content_type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;csv&#39;</span>)
+
+input_data <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">list</span>(<span style="color:#e6db74">&#39;train&#39;</span> <span style="color:#f92672">=</span> s3_train_input,
+                   <span style="color:#e6db74">&#39;validation&#39;</span> <span style="color:#f92672">=</span> s3_valid_input)
+</code></pre></div><h3 id="step-6---start-the-tuning-job">Step 6 - Start the tuning job</h3>
+<p>Calling <code>fit()</code> on our HyperparameterTuner object will start the tuning process shown in <a href="#the-sagemaker-hyperparameter-tuning-process">the image in the SageMaker hyperparameter tuning process section</a>. SageMaker fetches the training and the validation set from S3, obtains a built-in XGBoost algorithm docker container image for ML model training from ECR and pulls it into the newly launched EC2 training cluster. All of this happens fully-managed behind the scenes without further interaction with the user.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">tuner<span style="color:#f92672">$</span><span style="color:#a6e22e">fit</span>(inputs <span style="color:#f92672">=</span> input_data, 
+          job_name <span style="color:#f92672">=</span> job_name,
+          wait <span style="color:#f92672">=</span> <span style="color:#66d9ef">FALSE</span> <span style="color:#75715e"># If set to TRUE, the call will wait until the job completes</span>
+          )
+</code></pre></div><p>We can check via the API when the training job is finished. Once it has reached the status <strong>Completed</strong> you can move ahead to the next section.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">session<span style="color:#f92672">$</span><span style="color:#a6e22e">describe_tuning_job</span>(job_name)[[<span style="color:#e6db74">&#34;HyperParameterTuningJobStatus&#34;</span>]]
+</code></pre></div><pre><code>## [1] &quot;Completed&quot;
+</code></pre><h3 id="step-7---evaluate-the-tuning-job-results">Step 7 - Evaluate the tuning job results</h3>
+<p>Once the last round of training jobs finishes, SageMaker automatically shuts down and terminates our EC2 training cluster. We now check the tuning results by examining the final AUC value of each of the 30 training jobs first.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">tuning_job_results <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span><span style="color:#a6e22e">HyperparameterTuningJobAnalytics</span>(job_name)
+tuning_results_df <span style="color:#f92672">&lt;-</span> tuning_job_results<span style="color:#f92672">$</span><span style="color:#a6e22e">dataframe</span>()
+<span style="color:#a6e22e">head</span>(tuning_results_df)[, <span style="color:#a6e22e">c</span>(<span style="color:#ae81ff">1</span><span style="color:#f92672">:</span><span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">6</span>)]
+</code></pre></div><pre><code>##         eta max_depth num_round                             TrainingJobName
+## 1 0.1088321         7       103 hotels-xgb-2020-08-11-23-47-46-030-c2bf60b6
+## 2 0.1070945         7       100 hotels-xgb-2020-08-11-23-47-46-029-6df3546c
+## 3 0.1002320         9       121 hotels-xgb-2020-08-11-23-47-46-028-edf996bb
+## 4 0.1000000         9       112 hotels-xgb-2020-08-11-23-47-46-027-fccfc6cf
+## 5 0.1506055         4       174 hotels-xgb-2020-08-11-23-47-46-026-ce6a400b
+## 6 0.2183550         9       962 hotels-xgb-2020-08-11-23-47-46-025-7df3b203
+##   FinalObjectiveValue
+## 1             0.92640
+## 2             0.92427
+## 3             0.92727
+## 4             0.92642
+## 5             0.92254
+## 6             0.91457
+</code></pre><p>We can also plot a time series chart that shows how our objective metric AUC developed over the course of the 30 training jobs based on the underlying tuning orchestrated by the Bayesian optimizer. In the chart you can see that every time three training jobs were started in parallel
+.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">ggplot</span>(tuning_results_df, <span style="color:#a6e22e">aes</span>(TrainingEndTime, FinalObjectiveValue)) <span style="color:#f92672">+</span>
+  <span style="color:#a6e22e">geom_point</span>() <span style="color:#f92672">+</span>
+  <span style="color:#a6e22e">xlab</span>(<span style="color:#e6db74">&#34;Time&#34;</span>) <span style="color:#f92672">+</span>
+  <span style="color:#a6e22e">ylab</span>(tuning_job_results<span style="color:#f92672">$</span><span style="color:#a6e22e">description</span>()<span style="color:#f92672">$</span>TrainingJobDefinition<span style="color:#f92672">$</span>StaticHyperParameters<span style="color:#f92672">$</span>`_tuning_objective_metric`) <span style="color:#f92672">+</span>
+  <span style="color:#a6e22e">ggtitle</span>(<span style="color:#e6db74">&#34;Hyperparameter tuning objective metric&#34;</span>,  
+          <span style="color:#e6db74">&#34;Progression over the period of all 30 training jobs&#34;</span>) <span style="color:#f92672">+</span>
+  <span style="color:#a6e22e">theme_minimal</span>()
+</code></pre></div><p><img src="images/objective_metric_progression-1.png" style="display: block; margin: auto;" /></p>
+<p>In the following chart we plot <code>eta</code> against <code>num_round</code> to show how the Bayesian optimizer focused most of its training jobs on the region of the search space that produced the best models. The color of the dots shows the quality of the corresponding models based on the underlying AUC scores on the validation set. Yellow dots correspond to models with better AUC scores and violet dots indicate a worse AUC.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">ggplot</span>(tuning_results_df, <span style="color:#a6e22e">aes</span>(num_round, eta)) <span style="color:#f92672">+</span>
+  <span style="color:#a6e22e">geom_point</span>(<span style="color:#a6e22e">aes</span>(color <span style="color:#f92672">=</span> FinalObjectiveValue)) <span style="color:#f92672">+</span>
+  <span style="color:#a6e22e">scale_color_viridis</span>(<span style="color:#e6db74">&#34;AUC&#34;</span>, option <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;D&#34;</span>) <span style="color:#f92672">+</span>
+  <span style="color:#a6e22e">ggtitle</span>(<span style="color:#e6db74">&#34;Hyperparameter tuning objective metric progression&#34;</span>, <span style="color:#e6db74">&#34;Using a Bayesian strategy&#34;</span>) <span style="color:#f92672">+</span>
+  <span style="color:#a6e22e">theme_minimal</span>()
+</code></pre></div><p><img src="images/bayesian_optimization-1.png" style="display: block; margin: auto;" /></p>
+<p>Next, we extract the name of the best training job from the job list and then call <code>describe_training_job()</code> on the session object to get additional information about the best training job:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">best_tuned_model <span style="color:#f92672">&lt;-</span> tuning_results_df <span style="color:#f92672">%&gt;%</span>
+  <span style="color:#a6e22e">filter</span>(FinalObjectiveValue <span style="color:#f92672">==</span> <span style="color:#a6e22e">max</span>(FinalObjectiveValue)) <span style="color:#f92672">%&gt;%</span>
+  <span style="color:#a6e22e">pull</span>(TrainingJobName)
+best_tuned_model
+</code></pre></div><pre><code>## [1] &quot;hotels-xgb-2020-08-11-23-47-46-022-b279ccc9&quot;
+</code></pre><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">training_job_stats <span style="color:#f92672">&lt;-</span> session<span style="color:#f92672">$</span><span style="color:#a6e22e">describe_training_job</span>(job_name <span style="color:#f92672">=</span> best_tuned_model)
+
+final_metrics <span style="color:#f92672">&lt;-</span>  <span style="color:#a6e22e">map_df</span>(training_job_stats<span style="color:#f92672">$</span>FinalMetricDataList, 
+                          <span style="color:#f92672">~</span><span style="color:#a6e22e">tibble</span>(metric_name <span style="color:#f92672">=</span> .x[[<span style="color:#e6db74">&#34;MetricName&#34;</span>]],
+                                  value <span style="color:#f92672">=</span> .x[[<span style="color:#e6db74">&#34;Value&#34;</span>]]))
+final_metrics
+</code></pre></div><pre><code>## # A tibble: 3 x 2
+##   metric_name     value
+##   &lt;chr&gt;           &lt;dbl&gt;
+## 1 validation:auc  0.929
+## 2 train:auc       0.987
+## 3 ObjectiveMetric 0.929
+</code></pre><h2 id="final-model-evaluation">Final model evaluation</h2>
+<p>For the final model evaluation we will use the hold-out test set which we also created and uploaded to S3 and follow the exact same procedure we already used for the final evaluation of a single training job described in the last article.</p>
+<p>We will use Batch Transform which is a SageMaker feature for generating batch inferences. After that we will use built-in R capabilities to evaluate the results. We won&rsquo;t explain the details of each step to configure and start a Batch Transform job here. Please refer to <a href="../2020-07-09-training-a-model-with-a-built-in-algorithm">02 - Training a model with a built-in algorithm</a> for an in-depth description.</p>
+<h3 id="step-1---create-a-transformer-object">Step 1 - Create a Transformer object</h3>
+<p>This time we won&rsquo;t be able to create the Transformer object by calling <code>transformer()</code> on the Estimator object as shown for single training jobs in the previous article. Instead we use the Transformer constructor and specify the model we like to use to generate the predictions explicitly using the <code>model_name</code> parameter.</p>
+<p>For this we need to create a SageMaker model first based on the SageMaker training job by calling <code>create_model_from_job()</code> on the session object. If no model name is specified, the model automatically gets the name of the training job.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">predictions_path <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(models_path, <span style="color:#e6db74">&#34;/&#34;</span>, best_tuned_model, <span style="color:#e6db74">&#34;/predictions&#34;</span>)
+
+session<span style="color:#f92672">$</span><span style="color:#a6e22e">create_model_from_job</span>(best_tuned_model)
+
+xgb_batch_predictor <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span>transformer<span style="color:#f92672">$</span><span style="color:#a6e22e">Transformer</span>(
+  model_name <span style="color:#f92672">=</span> best_tuned_model,
+  instance_count <span style="color:#f92672">=</span> <span style="color:#ae81ff">1L</span>, 
+  instance_type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;ml.m5.4xlarge&#34;</span>, 
+  strategy <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;MultiRecord&#34;</span>,
+  assemble_with <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Line&#34;</span>,
+  output_path <span style="color:#f92672">=</span> predictions_path
+)
+</code></pre></div><h3 id="step-2---start-the-batch-prediction-job">Step 2 - Start the batch prediction job</h3>
+<p>We start our batch prediction job by calling <code>transform()</code> on the Transformer object.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">xgb_batch_predictor<span style="color:#f92672">$</span><span style="color:#a6e22e">transform</span>(
+  data <span style="color:#f92672">=</span> s3_test, 
+  content_type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;text/csv&#39;</span>,
+  split_type <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;Line&#34;</span>,
+  job_name <span style="color:#f92672">=</span> best_tuned_model,
+  wait <span style="color:#f92672">=</span> <span style="color:#66d9ef">FALSE</span>  <span style="color:#75715e"># If set to TRUE, the call will wait until the job completes</span>
+  )
+</code></pre></div><p>We can check via the API when the batch prediction job is finished and the inference cluster is shut and terminated. Once it has reached the status <strong>Completed</strong> you can move ahead to the next section.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">session<span style="color:#f92672">$</span><span style="color:#a6e22e">describe_transform_job</span>(best_tuned_model)[[<span style="color:#e6db74">&#34;TransformJobStatus&#34;</span>]]
+</code></pre></div><pre><code>## [1] &quot;Completed&quot;
+</code></pre><h3 id="step-3---download-the-test-set-predictions">Step 3 - Download the test set predictions</h3>
+<p>Next, we will download the prediction results from S3 and store them as a CSV file locally before reading them into a vector. Then we read the test set we stored in the previous article from disk. We store the predictions with the actual test set outcomes in a new tibble <code>test_results</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">s3_downloader <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span>s3<span style="color:#f92672">$</span><span style="color:#a6e22e">S3Downloader</span>()
+s3_test_predictions_path <span style="color:#f92672">&lt;-</span> s3_downloader<span style="color:#f92672">$</span><span style="color:#a6e22e">list</span>(predictions_path)
+ 
+<span style="color:#a6e22e">dir.create</span>(<span style="color:#e6db74">&#34;./predictions&#34;</span>)
+</code></pre></div><pre><code>## Warning in dir.create(&quot;./predictions&quot;): '.\predictions' already exists
+</code></pre><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">s3_downloader<span style="color:#f92672">$</span><span style="color:#a6e22e">download</span>(s3_test_predictions_path, <span style="color:#e6db74">&#34;./predictions&#34;</span>)
+ 
+test_predictions <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">read_csv</span>(<span style="color:#e6db74">&#34;./predictions/hotels_test.csv.out&#34;</span>,
+                              col_names <span style="color:#f92672">=</span> <span style="color:#66d9ef">FALSE</span>) <span style="color:#f92672">%&gt;%</span> 
+   <span style="color:#a6e22e">pull</span>(X1)
+
+hotels_test <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">read_csv</span>(<span style="color:#e6db74">&#34;../data/hotels_test_with_dependent_variable.csv&#34;</span>)
+
+test_results <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">tibble</span>(
+  truth <span style="color:#f92672">=</span> hotels_test<span style="color:#f92672">$</span>children,
+  predictions <span style="color:#f92672">=</span> test_predictions
+)
+
+<span style="color:#a6e22e">head</span>(test_results)
+</code></pre></div><pre><code>## # A tibble: 6 x 2
+##   truth predictions
+##   &lt;dbl&gt;       &lt;dbl&gt;
+## 1     0     0.00730
+## 2     0     0.0176 
+## 3     0     0.00478
+## 4     0     0.0345 
+## 5     0     0.0312 
+## 6     0     0.00824
+</code></pre><h3 id="step-4---evaluate-the-test-set-predictions">Step 4 - Evaluate the test set predictions</h3>
+<p>Let us have a look at the ROC curve and the AUC value of the test data set using the <code>pROC</code> package:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">roc_obj <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">roc</span>(test_results<span style="color:#f92672">$</span>truth, test_results<span style="color:#f92672">$</span>predictions,
+               plot <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>,         
+               grid <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>,
+               print.auc <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>,
+               legacy.axes <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>, 
+               main <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;ROC curve for XGBoost classification using the best model&#34;</span>,
+               show.thres<span style="color:#f92672">=</span><span style="color:#66d9ef">TRUE</span>,
+               col <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;red2&#34;</span>
+)
+</code></pre></div><pre><code>## Setting levels: control = 0, case = 1
+</code></pre><pre><code>## Setting direction: controls &lt; cases
+</code></pre><p><img src="images/roc_curve-1.png" alt=""><!-- --></p>
+<p>Creating a confusion matrix using the <code>caret</code> package we see the following results:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">conf_matrix <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">confusionMatrix</span>(
+  <span style="color:#a6e22e">factor</span>(<span style="color:#a6e22e">ifelse</span>(test_results<span style="color:#f92672">$</span>predictions <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0.5</span>, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">0</span>), levels <span style="color:#f92672">=</span> <span style="color:#a6e22e">c</span>(<span style="color:#e6db74">&#34;0&#34;</span>, <span style="color:#e6db74">&#34;1&#34;</span>), 
+         labels <span style="color:#f92672">=</span> <span style="color:#a6e22e">c</span>(<span style="color:#e6db74">&#34;no children&#34;</span>, <span style="color:#e6db74">&#34;children&#34;</span>)),
+  <span style="color:#a6e22e">factor</span>(test_results<span style="color:#f92672">$</span>truth, levels <span style="color:#f92672">=</span> <span style="color:#a6e22e">c</span>(<span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">1</span>), 
+         labels <span style="color:#f92672">=</span> <span style="color:#a6e22e">c</span>(<span style="color:#e6db74">&#34;no children&#34;</span>, <span style="color:#e6db74">&#34;children&#34;</span>)), 
+  positive <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;children&#34;</span>)
+conf_matrix
+</code></pre></div><pre><code>## Confusion Matrix and Statistics
+## 
+##              Reference
+## Prediction    no children children
+##   no children        6833      307
+##   children             60      300
+##                                           
+##                Accuracy : 0.9511          
+##                  95% CI : (0.9459, 0.9558)
+##     No Information Rate : 0.9191          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.5961          
+##                                           
+##  Mcnemar's Test P-Value : &lt; 2.2e-16       
+##                                           
+##             Sensitivity : 0.49423         
+##             Specificity : 0.99130         
+##          Pos Pred Value : 0.83333         
+##          Neg Pred Value : 0.95700         
+##              Prevalence : 0.08093         
+##          Detection Rate : 0.04000         
+##    Detection Prevalence : 0.04800         
+##       Balanced Accuracy : 0.74276         
+##                                           
+##        'Positive' Class : children        
+## 
+</code></pre><p>Even though the accuracy for the test set predictions is quite high, the model did not perform that well in identifying the &ldquo;positive&rdquo; class (having children). The low sensitivity was expected based on the class imbalance in the original data set which we fairly ignored while preprocessing the data at the beginning. However, the tuned model performed better in every area compared to the model we created based on the single training job <a href="../2020-07-09-training-a-model-with-a-built-in-algorithm">in the previous article</a>.</p>
+<h2 id="summary">Summary</h2>
+<p>In this article we explained the underlying mechanisms of SageMaker hyperparameter tuning jobs and showcased how to start tuning jobs using the Estimator object/HyperparameterTuner object combination. We created some plots visualizing the progress and results of the tuning job. Finally, we used a Transformer object to start a batch inference job to make test set predictions using the best model and evaluated the final model performance in R.</p>
+<p><a href="../2020-09-19-model-deployment-for-real-time-predictions">In the next article of the series</a> we will have a have a deep dive on model deployment for real-time predictions.</p>
+
+      </div>
+
+      <footer>
+        
+
+
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "alex23lemm-github-io-1" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+    
+     © 2021
+    
+       · 
+      Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+    
+  </section>
+</footer>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/r.min.js"></script>
+<script>
+hljs.configure({languages: []});
+hljs.initHighlightingOnLoad();
+</script>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-55248554-4', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>

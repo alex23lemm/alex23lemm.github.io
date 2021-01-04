@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Alex Lemm">
+    <meta name="description" content="Alex Lemm&#39;s personal website">
+    <meta name="keywords" content="blog,analytics,personal,r,datascience,aws">
+
+    <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="SageMaker fundamentals for R users - 01: Connecting RStudio to SageMaker"/>
+<meta name="twitter:description" content="The SageMaker Fundamentals for R users article series is for experienced R users with no prior Amazon SageMaker knowledge, who want to use their own (local) RStudio installation as an alternative to SageMaker Notebooks to connect to SageMaker to train, tune, evaluate, deploy and monitor machine learning models in the cloud.
+We will use a single project example throughout the article series to explain the entire machine learning process end-to-end using SageMaker from a data science practitioner perspective."/>
+
+    <meta property="og:title" content="SageMaker fundamentals for R users - 01: Connecting RStudio to SageMaker" />
+<meta property="og:description" content="The SageMaker Fundamentals for R users article series is for experienced R users with no prior Amazon SageMaker knowledge, who want to use their own (local) RStudio installation as an alternative to SageMaker Notebooks to connect to SageMaker to train, tune, evaluate, deploy and monitor machine learning models in the cloud.
+We will use a single project example throughout the article series to explain the entire machine learning process end-to-end using SageMaker from a data science practitioner perspective." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://alex23lemm.github.io/posts/2020-06-30-connecting-local-rstudio-to-amazon-sagemaker/" />
+<meta property="article:published_time" content="2020-06-30T00:00:00+00:00" />
+<meta property="article:modified_time" content="2020-06-30T00:00:00+00:00" />
+
+
+    
+      <base href="https://alex23lemm.github.io/posts/2020-06-30-connecting-local-rstudio-to-amazon-sagemaker/">
+    
+    <title>
+  SageMaker fundamentals for R users - 01: Connecting RStudio to SageMaker · alex23lemm
+</title>
+
+    
+      <link rel="canonical" href="https://alex23lemm.github.io/posts/2020-06-30-connecting-local-rstudio-to-amazon-sagemaker/">
+    
+
+    <link href="https://fonts.googleapis.com/css?family=Lato:400,700%7CMerriweather:300,700%7CSource+Code+Pro:400,700" rel="stylesheet">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" integrity="sha256-l85OmPOjvil/SOvVt3HnSSjzF1TUMyT9eV0c2BzEGzU=" crossorigin="anonymous" />
+
+    
+      
+      
+      <link rel="stylesheet" href="https://alex23lemm.github.io/css/coder.min.28d751104f30c16da1aa1bb04015cbe662cacfe0d1b01af4f2240ad58580069c.css" integrity="sha256-KNdREE8wwW2hqhuwQBXL5mLKz&#43;DRsBr08iQK1YWABpw=" crossorigin="anonymous" media="screen" />
+    
+
+    
+
+    
+
+    
+
+    
+    
+    <link rel="icon" type="image/png" href="https://alex23lemm.github.io/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://alex23lemm.github.io/images/favicon-16x16.png" sizes="16x16">
+
+    <meta name="generator" content="Hugo 0.80.0" />
+  </head>
+
+  <body class=" ">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://alex23lemm.github.io/">
+      alex23lemm
+    </a>
+    <input type="checkbox" id="menu-toggle" />
+    <label class="menu-button float-right" for="menu-toggle"><i class="fas fa-bars"></i></label>
+    <ul class="navigation-list">
+      
+        
+          <li class="navigation-item">
+            <a class="navigation-link" href="https://alex23lemm.github.io/posts/">Blog</a>
+          </li>
+        
+      
+      
+    </ul>
+  </section>
+</nav>
+<link href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/atom-one-dark-reasonable.min.css" rel="stylesheet">
+
+
+      <div class="content">
+        
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">SageMaker fundamentals for R users - 01: Connecting RStudio to SageMaker</h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fas fa-calendar"></i>
+              <time datetime='2020-06-30T00:00:00Z'>
+                Jun 30, 2020
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fas fa-clock"></i>
+              8 minutes read
+            </span>
+          </div>
+          
+          
+        </div>
+      </header>
+
+      <div>
+        <p>The <strong>SageMaker Fundamentals for R users</strong> article series is for experienced 
+R users with no prior Amazon SageMaker knowledge, who want to use their 
+own (local) RStudio installation as an alternative to SageMaker Notebooks 
+to connect to SageMaker to train, tune, evaluate, deploy and monitor machine 
+learning models in the cloud.</p>
+<p>We will use a single project example throughout the article series to 
+explain the entire machine learning process end-to-end using SageMaker from 
+a data science practitioner perspective. In addition, you will gain gain a 
+solid understanding of the underlying SageMaker fundamentals, such as what 
+happens behind the scenes when a training, tuning job or batch inference 
+job is started. We show R recipes and best practices on how to parse 
+and visualize the responses returned from Amazon SageMaker in the 
+different stages of the machine learning process.</p>
+<p>We will use the <a href="https://rstudio.github.io/reticulate/">reticulate package</a> 
+as an R interface to Python to make API calls to SageMaker using the 
+SageMaker Python SDK.</p>
+<p><strong>This first article of the series</strong> solely focuses on how to prepare and configure your 
+RStudio environment that should be used to connect to Amazon
+SageMaker. We assume that you install all necessary prerequisites from
+scratch.</p>
+<p>The entire code of this article is also part of a self-paced and fully 
+reproducible workshop that you can <a href="https://github.com/alex23lemm/AWS-SageMaker-Fundamentals-R-Workshop">download from GitHub here</a>.</p>
+<h2 id="installing-reticulate-and-miniconda">Installing reticulate and miniconda</h2>
+<p>We get started by launching R/RStudio to install the <code>reticulate</code>
+package and <code>miniconda</code> on your machine:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">install.packages</span>(<span style="color:#e6db74">&#34;reticulate&#34;</span>)
+
+<span style="color:#a6e22e">library</span>(reticulate)
+
+<span style="color:#a6e22e">install_miniconda</span>()
+</code></pre></div><p>If you are using Windows, then after installing miniconda, please make
+sure to add the following entries to your system <code>PATH</code> variable,
+otherwise the <code>reticulate::conda_install()</code> commands below will fail
+when setting the pip = TRUE argument. It took me quite a long time to
+figure this out. See also this discussion on GitHub on that topic which
+solved the issue:
+<a href="https://github.com/pypa/virtualenv/issues/1139" class="uri"><a href="https://github.com/pypa/virtualenv/issues/1139">https://github.com/pypa/virtualenv/issues/1139</a></a>.
+(If you don’t want to edit the system <code>PATH</code> variable, please check out
+the <em>Alternative package installation</em> paragraph in the next section as
+an alternative approach when creating our Amazon SageMaker-specific
+conda environment.)</p>
+<pre><code>C:\%Miniconda3_DIR%;
+C:\%Miniconda3_DIR%\Scripts;
+C:\%Miniconda3_DIR%\Library\bin
+</code></pre>
+<p><code>%Miniconda3_DIR%</code> should be substituted by your Miniconda installation
+path.</p>
+<p>Please, close and re-open R/RStudio after editing your system <code>PATH</code>
+variable (restarting the R session within RStudio won’t be enough).</p>
+<h2 id="creating-an-amazon-sagemaker-conda-environment">Creating an Amazon SageMaker conda environment</h2>
+<p>Next, we will create a new conda environment which we will use
+throughout this course to connect to Amazon SageMaker:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">library</span>(reticulate)
+
+<span style="color:#a6e22e">conda_create</span>(<span style="color:#e6db74">&#34;sagemaker-r&#34;</span>)
+</code></pre></div><p>If you installed everything from scratch so far, you should now see
+three listed conda environments: <code>r-miniconda</code> which came with the
+miniconda installation, <code>r-reticluate</code> which is the standard environment
+used by the <code>reticulate</code> package, and <code>sagemaker-r</code> which we just
+created:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">conda_list</span>()
+
+<span style="color:#75715e">##           name</span>
+<span style="color:#75715e">## 1  r-miniconda</span>
+<span style="color:#75715e">## 2 r-reticulate</span>
+<span style="color:#75715e">## 3  sagemaker-r</span>
+<span style="color:#75715e">##                                                                             python</span>
+<span style="color:#75715e">## 1                     C:\\Users\\alexlemm\\AppData\\Local\\r-miniconda\\python.exe</span>
+<span style="color:#75715e">## 2 C:\\Users\\alexlemm\\AppData\\Local\\r-miniconda\\envs\\r-reticulate\\python.exe</span>
+<span style="color:#75715e">## 3  C:\\Users\\alexlemm\\AppData\\Local\\r-miniconda\\envs\\sagemaker-r\\python.exe</span>
+</code></pre></div><p>Now, we will install the necessary Python packages in our new
+environment. We only install pandas in our environment to avoid getting
+a warning message every time we import the Amazon SageMaker Python
+module in our R scripts. Otherwise we won’t need/use pandas.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">conda_install</span>(<span style="color:#e6db74">&#34;sagemaker-r&#34;</span>, <span style="color:#e6db74">&#34;boto3&#34;</span>, pip <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>)
+<span style="color:#a6e22e">conda_install</span>(<span style="color:#e6db74">&#34;sagemaker-r&#34;</span>, <span style="color:#e6db74">&#34;sagemaker&#34;</span>, pip <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>)
+<span style="color:#a6e22e">conda_install</span>(<span style="color:#e6db74">&#34;sagemaker-r&#34;</span>, <span style="color:#e6db74">&#34;pandas&#34;</span>)
+</code></pre></div><p><strong>Alternative package installation</strong>: If you don’t like to edit your
+system <code>PATH</code> variable in order to install Python libraries using pip
+from R, <em>skip the last code block above</em> and <em>do the following instead</em>:</p>
+<ul>
+<li>Outside of this notebook open Anaconda Prompt.</li>
+<li>Activate the environment you just created via
+<code>conda activate sagemaker-r</code>.</li>
+<li>Install <code>boto3</code> by executing <code>pip install boto3</code>.</li>
+<li>Install <code>sagemaker</code> by executing <code>pip install sagemaker</code>.</li>
+<li>Install <code>pandas</code> by executing <code>conda install pandas</code>.</li>
+<li>Close Anaconda Prompt.</li>
+</ul>
+<h2 id="configuring-your-aws-credentials">Configuring your AWS credentials</h2>
+<p>Before you can begin using <code>sagemaker</code> and <code>boto3</code>, you need to set up
+your AWS authentication credentials on your machine. Credentials for
+your AWS account can be found in Identity &amp; Access Management (IAM) when
+logged in to the AWS console. You can create or use an existing AWS user
+depending on your privileges. Assuming that you already have an AWS user
+configured, please do the following:</p>
+<ul>
+<li>In the AWS Console navigate to IAM and click on <strong>Users</strong> in the
+left sidebar.</li>
+<li>Click on your user in the user table and then select the <strong>Security
+credentials</strong> tab.</li>
+<li>Click on <strong>Create access key</strong> and make sure to copy both the
+<strong>Access key ID</strong> and the <strong>Secret access key</strong>.</li>
+</ul>
+<p>On your machine, create a credential file at <code>~/.aws/credentials</code> and
+add the following (<code>credentials</code> is the name of the file and it does not
+have a file extension):</p>
+<pre><code>[default]
+aws_access_key_id = [YOUR_ACCESS_KEY_ID]
+aws_secret_access_key = [YOUR_SECRET_ACCESS_KEY]
+</code></pre>
+<p>You may also want to set a default region of your choice. This can be
+done in the configuration file you can create at <code>~/.aws/config</code> (Again,
+<code>config</code> is the name of the file and it does not have a file extension).
+We will use <code>us-east-1</code> as our standard region:</p>
+<pre><code>[default]
+region=us-east-1
+</code></pre>
+<p><strong>Important</strong>: Make sure to set a default region in which the SageMaker
+service is available. See the <a href="https://aws.amazon.com/about-aws/global-infrastructure/regional-product-services/">AWS region
+table</a>
+for the latest information on regional service availability.</p>
+<h2 id="creating-an-iam-role-for-amazon-sagemaker">Creating an IAM role for Amazon SageMaker</h2>
+<p>Functions that we will use to execute training and tuning jobs on Amazon
+SageMaker later require to pass an IAM role that will give Amazon
+SageMaker permission to perform actions in other AWS services on your
+behalf. For instance, the Amazon SageMaker training jobs use this role
+to access training data that resides in S3. Roles are specified via
+Amazon Resource Names (ARNs) that uniquely identify AWS resources.</p>
+<p>Below we describe two alternative ways to create the role: Via the AWS
+Console or programmatically.</p>
+<p>After we will have created the role, we will copy its ARN and save it as
+an R environment variable.</p>
+<h3 id="option-1-creating-the-role-via-the-aws-console">Option 1: Creating the role via the AWS Console</h3>
+<p>We need to log on to the AWS console and create the respective role
+while configuring the launch options of an Amazon SageMaker notebook.</p>
+<p>To do so, please execute the following steps:</p>
+<ul>
+<li>Log in to the AWS Console and navigate to the SageMaker service.</li>
+<li>In the left sidebar go to <strong>Notebook instances</strong> and click on
+<strong>Create notebook instance</strong>.</li>
+<li>Go to the <strong>Permissions and encryption</strong> section and select <strong>Create
+new IAM role</strong> from the drop-down menu.</li>
+<li>In the <strong>Create an IAM role window</strong> under <strong>S3 buckets you
+specify - optional</strong> select <strong>None</strong> and go with the remaining
+defaults.</li>
+<li>Click on <strong>Create role</strong></li>
+<li>You will now see a message <em>“Success! You created an IAM role”</em>.
+Click on the link that is part of the message that will bring you to
+IAM.</li>
+<li>Copy the Role ARN which has the following format to your clipboard:
+<code>arn:aws:iam::[YOUR_ACCOUNT_ID]:role/service-role/AmazonSageMaker-ExecutionRole-[RESOURCE_ID]</code>.</li>
+<li>You can now leave the AWS Console and you do not need to create the
+notebook instance.</li>
+</ul>
+<h3 id="option-2-creating-the-role-programmatically">Option 2: Creating the role programmatically</h3>
+<p>You can also create the role you generated in the section above with the
+exact same permissions programmatically by executing the following code:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#75715e"># Activate the conda environment we created earlier</span>
+<span style="color:#a6e22e">use_condaenv</span>(<span style="color:#e6db74">&#34;sagemaker-r&#34;</span>, required <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>)
+
+<span style="color:#75715e"># Create a boto3 client to access IAM</span>
+boto3 <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">import</span>(<span style="color:#e6db74">&#34;boto3&#34;</span>)
+iam_client <span style="color:#f92672">&lt;-</span> boto3<span style="color:#f92672">$</span><span style="color:#a6e22e">client</span>(<span style="color:#e6db74">&#34;iam&#34;</span>)
+
+time_stamp <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">format</span>(<span style="color:#a6e22e">Sys.time</span>(), <span style="color:#e6db74">&#34;%Y%m%dT%H%M%S&#34;</span>)
+
+role_name <span style="color:#f92672">=</span> <span style="color:#a6e22e">paste0</span>(<span style="color:#e6db74">&#34;AmazonSageMaker-ExecutionRole-&#34;</span>, time_stamp)
+
+<span style="color:#75715e"># A trust relationship policy defines which entity can assume this role. </span>
+<span style="color:#75715e"># In our case that will be the Amazon SageMaker service</span>
+trust_relationship_policy <span style="color:#f92672">&lt;-</span> <span style="color:#e6db74">&#39;{
+</span><span style="color:#e6db74">  &#34;Version&#34;: &#34;2012-10-17&#34;,
+</span><span style="color:#e6db74">  &#34;Statement&#34;: [
+</span><span style="color:#e6db74">    {
+</span><span style="color:#e6db74">      &#34;Effect&#34;: &#34;Allow&#34;,
+</span><span style="color:#e6db74">      &#34;Principal&#34;: {
+</span><span style="color:#e6db74">        &#34;Service&#34;: &#34;sagemaker.amazonaws.com&#34;
+</span><span style="color:#e6db74">      },
+</span><span style="color:#e6db74">      &#34;Action&#34;: &#34;sts:AssumeRole&#34;
+</span><span style="color:#e6db74">    }
+</span><span style="color:#e6db74">  ]
+</span><span style="color:#e6db74">}&#39;</span>
+
+<span style="color:#75715e"># Creating the new IAM role</span>
+resp <span style="color:#f92672">&lt;-</span> iam_client<span style="color:#f92672">$</span><span style="color:#a6e22e">create_role</span>(Path <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/service-role/&#34;</span>,
+                        RoleName <span style="color:#f92672">=</span> role_name,
+                        AssumeRolePolicyDocument <span style="color:#f92672">=</span> trust_relationship_policy,
+                        Description <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;SageMaker execution role created from RStudio&#34;</span>)
+
+<span style="color:#75715e"># This is the role&#39;s ARN we need to save as an environment variable later! </span>
+role_arn <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>Role<span style="color:#f92672">$</span>Arn
+
+<span style="color:#75715e"># Attach the AWS managed policy &#34;AmazonSageMakerFullAccess&#34; to the role. </span>
+<span style="color:#75715e"># This policy provides full access to Amazon SageMaker via the AWS Management Console and SDK. </span>
+<span style="color:#75715e"># It also provides selected access to related services (e.g., S3, ECR, CloudWatch Logs). </span>
+resp <span style="color:#f92672">&lt;-</span> iam_client<span style="color:#f92672">$</span><span style="color:#a6e22e">attach_role_policy</span>(RoleName <span style="color:#f92672">=</span> role_name, 
+                                      PolicyArn <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;arn:aws:iam::aws:policy/AmazonSageMakerFullAccess&#34;</span>)
+
+<span style="color:#75715e"># Create a new managed policy which also will be attached to the new role. </span>
+policy_document <span style="color:#f92672">&lt;-</span> <span style="color:#e6db74">&#39;{
+</span><span style="color:#e6db74">    &#34;Version&#34;: &#34;2012-10-17&#34;,
+</span><span style="color:#e6db74">    &#34;Statement&#34;: [
+</span><span style="color:#e6db74">        {
+</span><span style="color:#e6db74">            &#34;Action&#34;: [
+</span><span style="color:#e6db74">                &#34;s3:ListBucket&#34;
+</span><span style="color:#e6db74">            ],
+</span><span style="color:#e6db74">            &#34;Effect&#34;: &#34;Allow&#34;,
+</span><span style="color:#e6db74">            &#34;Resource&#34;: [
+</span><span style="color:#e6db74">                &#34;arn:aws:s3:::SageMaker&#34;
+</span><span style="color:#e6db74">            ]
+</span><span style="color:#e6db74">        },
+</span><span style="color:#e6db74">        {
+</span><span style="color:#e6db74">            &#34;Action&#34;: [
+</span><span style="color:#e6db74">                &#34;s3:GetObject&#34;,
+</span><span style="color:#e6db74">                &#34;s3:PutObject&#34;,
+</span><span style="color:#e6db74">                &#34;s3:DeleteObject&#34;
+</span><span style="color:#e6db74">            ],
+</span><span style="color:#e6db74">            &#34;Effect&#34;: &#34;Allow&#34;,
+</span><span style="color:#e6db74">            &#34;Resource&#34;: [
+</span><span style="color:#e6db74">                &#34;arn:aws:s3:::SageMaker/*&#34;
+</span><span style="color:#e6db74">            ]
+</span><span style="color:#e6db74">        }
+</span><span style="color:#e6db74">    ]
+</span><span style="color:#e6db74">}&#39;</span>
+
+resp <span style="color:#f92672">&lt;-</span> iam_client<span style="color:#f92672">$</span><span style="color:#a6e22e">create_policy</span>(PolicyName <span style="color:#f92672">=</span> <span style="color:#a6e22e">paste0</span>(<span style="color:#e6db74">&#34;AmazonSageMaker-ExecutionPolicy-&#34;</span>, time_stamp),
+                                 Path <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/service-role/&#34;</span>,
+                                 PolicyDocument <span style="color:#f92672">=</span> policy_document)
+policy_arn <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>Policy<span style="color:#f92672">$</span>Arn
+resp <span style="color:#f92672">&lt;-</span> iam_client<span style="color:#f92672">$</span><span style="color:#a6e22e">attach_role_policy</span>(RoleName <span style="color:#f92672">=</span> role_name,
+                                      PolicyArn <span style="color:#f92672">=</span> policy_arn)
+
+<span style="color:#75715e"># Print the role&#39;s ARN to the console and copy it to the clipboard</span>
+role_arn
+</code></pre></div><h3 id="saving-the-role-arn-as-an-r-environment-variable">Saving the role ARN as an R environment variable</h3>
+<p>Now that we have the new role’s ARN, we will save it as an R environment
+variable under <code>.Renivron</code>. You can easily edit <code>.Renviron</code> using
+<code>usethis::edit_r_environ()</code>. Please add the following environment
+variable to the file and paste the ARN from your clipboard:</p>
+<pre><code>SAGEMAKER_ROLE_ARN = [YOUR_SAGEMAKER_ROLE_ARN]
+</code></pre>
+<p>Make sure to re-start your R session.</p>
+<h2 id="testing-your-setup">Testing your setup</h2>
+<p>We are finally ready to test our setup! In RStudio select the new conda
+environment we created earlier:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">library</span>(reticulate)
+
+<span style="color:#a6e22e">use_condaenv</span>(<span style="color:#e6db74">&#34;sagemaker-r&#34;</span>, required <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>)
+</code></pre></div><p>Execute the following lines of code which import the SageMaker Python
+module, create a SageMaker Session object and create a default Amazon S3
+bucket for our sessions. Calling <code>default_bucket()</code> the first time will
+create the default bucket based on the following format:
+<code>sagemaker-[YOUR_REGION]-[YOUR_AWS_ACCOUNT_ID]</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">sagemaker <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">import</span>(<span style="color:#e6db74">&#34;sagemaker&#34;</span>)
+session <span style="color:#f92672">&lt;-</span> sagemaker<span style="color:#f92672">$</span><span style="color:#a6e22e">Session</span>()
+
+my_bucket <span style="color:#f92672">&lt;-</span> session<span style="color:#f92672">$</span><span style="color:#a6e22e">default_bucket</span>()
+my_bucket
+</code></pre></div><p>If everything was configured correctly, you should have been able to
+execute the four lines of code above successfully and now see the name
+of your default Amazon S3 bucket printed to the console.</p>
+<h2 id="summary">Summary</h2>
+<p>Congratulations, you made it through the entire configuration journey!
+In this article we showed how to configure your own RStudio environment
+to connect to Amazon SageMaker as an alternative to Amazon SageMaker
+Notebooks. In the next articles the real fun part will begin and
+we will use one example project to run through the entire machine
+learning process using Amazon SageMaker from RStudio. We will start with
+training and evaluating a XGBoost model <a href="../2020-07-09-training-a-model-with-a-built-in-algorithm">in the next article of the series</a>.</p>
+
+      </div>
+
+      <footer>
+        
+
+
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "alex23lemm-github-io-1" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+    
+     © 2021
+    
+       · 
+      Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+    
+  </section>
+</footer>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/r.min.js"></script>
+<script>
+hljs.configure({languages: []});
+hljs.initHighlightingOnLoad();
+</script>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-55248554-4', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>

@@ -6,10 +6,26 @@
     <description>Recent content on alex23lemm</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en</language>
-    <lastBuildDate>Sun, 12 Jul 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sat, 19 Sep 2020 00:00:00 +0000</lastBuildDate><atom:link href="https://alex23lemm.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>SageMaker fundamentals for R users - 04: Model deployment</title>
+      <link>https://alex23lemm.github.io/posts/2020-09-19-model-deployment-for-real-time-predictions/</link>
+      <pubDate>Sat, 19 Sep 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://alex23lemm.github.io/posts/2020-09-19-model-deployment-for-real-time-predictions/</guid>
+      <description>The SageMaker Fundamentals for R users article series is for experienced R users with no prior Amazon SageMaker knowledge, who want to use their own (local) RStudio installation as an alternative to SageMaker Notebooks to connect to SageMaker to train, tune, evaluate, deploy and monitor machine learning models in the cloud.
+In the last article 03 - Hyperparameter tuning we learned how to configure and start a hyperparameter tuning job using the built-in XGBoost algorithm.</description>
+    </item>
     
-	<atom:link href="https://alex23lemm.github.io/index.xml" rel="self" type="application/rss+xml" />
-    
+    <item>
+      <title>SageMaker fundamentals for R users - 03: Hyperparameter tuning</title>
+      <link>https://alex23lemm.github.io/posts/2020-08-16-hyperparameter-tuning/</link>
+      <pubDate>Sun, 16 Aug 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://alex23lemm.github.io/posts/2020-08-16-hyperparameter-tuning/</guid>
+      <description>The SageMaker Fundamentals for R users article series is for experienced R users with no prior Amazon SageMaker knowledge, who want to use their own (local) RStudio installation as an alternative to SageMaker Notebooks to connect to SageMaker to train, tune, evaluate, deploy and monitor machine learning models in the cloud.
+In the last article of the series 02 - Training a model with a built-in algorithm we showed how to configure and start a single training job with static hyperparameters using the built-in XGBoost algorithm to solve a binary classification problem.</description>
+    </item>
     
     <item>
       <title>Using Amazon Rekognition from R</title>
@@ -17,10 +33,30 @@
       <pubDate>Sun, 12 Jul 2020 00:00:00 +0000</pubDate>
       
       <guid>https://alex23lemm.github.io/posts/2020-07-12-using-amazon-rekognition-from-r/</guid>
-      <description>In this article we will demostrate how to access Amazon Rekognition using the fabulous paws package, an AWS SDK for R, created by David Kretch and Adam Banker.
+      <description>In this article we will demonstrate how to access Amazon Rekognition using the fabulous paws package, an AWS SDK for R, created by David Kretch and Adam Banker.
 Amazon Rekognition is a service for image and video analysis which comes with pre-trained deep learning models and a simple API which makes it easy for developers to add these analytics capabilities to their applications.
 Some of Amazon Rekognition&amp;rsquo;s features include:
  Object and scene detection Image moderation (checks if the image content is appropriate) Facial analysis Celebrity recognition Face comparison (looking for a facial match in an image based on a single training photo) Text in image (e.</description>
+    </item>
+    
+    <item>
+      <title>SageMaker fundamentals for R users - 02: Train a model with a built-in algo</title>
+      <link>https://alex23lemm.github.io/posts/2020-07-09-training-a-model-with-a-built-in-algorithm/</link>
+      <pubDate>Thu, 09 Jul 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://alex23lemm.github.io/posts/2020-07-09-training-a-model-with-a-built-in-algorithm/</guid>
+      <description>The SageMaker Fundamentals for R users article series is for experienced R users with no prior Amazon SageMaker knowledge, who want to use their own (local) RStudio installation as an alternative to SageMaker Notebooks to connect to SageMaker to train, tune, evaluate, deploy and monitor machine learning models in the cloud.
+We will use a single project example throughout the article series to explain the entire machine learning process end-to-end using SageMaker from a data science practitioner perspective.</description>
+    </item>
+    
+    <item>
+      <title>SageMaker fundamentals for R users - 01: Connecting RStudio to SageMaker</title>
+      <link>https://alex23lemm.github.io/posts/2020-06-30-connecting-local-rstudio-to-amazon-sagemaker/</link>
+      <pubDate>Tue, 30 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://alex23lemm.github.io/posts/2020-06-30-connecting-local-rstudio-to-amazon-sagemaker/</guid>
+      <description>The SageMaker Fundamentals for R users article series is for experienced R users with no prior Amazon SageMaker knowledge, who want to use their own (local) RStudio installation as an alternative to SageMaker Notebooks to connect to SageMaker to train, tune, evaluate, deploy and monitor machine learning models in the cloud.
+We will use a single project example throughout the article series to explain the entire machine learning process end-to-end using SageMaker from a data science practitioner perspective.</description>
     </item>
     
   </channel>

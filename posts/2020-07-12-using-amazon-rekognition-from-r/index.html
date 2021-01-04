@@ -11,13 +11,13 @@
 
     <meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="Using Amazon Rekognition from R"/>
-<meta name="twitter:description" content="In this article we will demostrate how to access Amazon Rekognition using the fabulous paws package, an AWS SDK for R, created by David Kretch and Adam Banker.
+<meta name="twitter:description" content="In this article we will demonstrate how to access Amazon Rekognition using the fabulous paws package, an AWS SDK for R, created by David Kretch and Adam Banker.
 Amazon Rekognition is a service for image and video analysis which comes with pre-trained deep learning models and a simple API which makes it easy for developers to add these analytics capabilities to their applications.
 Some of Amazon Rekognition&rsquo;s features include:
  Object and scene detection Image moderation (checks if the image content is appropriate) Facial analysis Celebrity recognition Face comparison (looking for a facial match in an image based on a single training photo) Text in image (e."/>
 
     <meta property="og:title" content="Using Amazon Rekognition from R" />
-<meta property="og:description" content="In this article we will demostrate how to access Amazon Rekognition using the fabulous paws package, an AWS SDK for R, created by David Kretch and Adam Banker.
+<meta property="og:description" content="In this article we will demonstrate how to access Amazon Rekognition using the fabulous paws package, an AWS SDK for R, created by David Kretch and Adam Banker.
 Amazon Rekognition is a service for image and video analysis which comes with pre-trained deep learning models and a simple API which makes it easy for developers to add these analytics capabilities to their applications.
 Some of Amazon Rekognition&rsquo;s features include:
  Object and scene detection Image moderation (checks if the image content is appropriate) Facial analysis Celebrity recognition Face comparison (looking for a facial match in an image based on a single training photo) Text in image (e." />
@@ -59,7 +59,7 @@ Some of Amazon Rekognition&rsquo;s features include:
     <link rel="icon" type="image/png" href="https://alex23lemm.github.io/images/favicon-32x32.png" sizes="32x32">
     <link rel="icon" type="image/png" href="https://alex23lemm.github.io/images/favicon-16x16.png" sizes="16x16">
 
-    <meta name="generator" content="Hugo 0.69.0" />
+    <meta name="generator" content="Hugo 0.80.0" />
   </head>
 
   <body class=" ">
@@ -99,7 +99,7 @@ Some of Amazon Rekognition&rsquo;s features include:
             <span class="posted-on">
               <i class="fas fa-calendar"></i>
               <time datetime='2020-07-12T00:00:00Z'>
-                July 12, 2020
+                Jul 12, 2020
               </time>
             </span>
             <span class="reading-time">
@@ -113,7 +113,7 @@ Some of Amazon Rekognition&rsquo;s features include:
       </header>
 
       <div>
-        <p>In this article we will demostrate how to access Amazon Rekognition using the fabulous <a href="https://github.com/paws-r/paws">paws package</a>, an AWS SDK for R, created by <a href="https://github.com/davidkretch">David Kretch</a> and <a href="https://github.com/adambanker">Adam Banker</a>.</p>
+        <p>In this article we will demonstrate how to access Amazon Rekognition using the fabulous <a href="https://github.com/paws-r/paws">paws package</a>, an AWS SDK for R, created by <a href="https://github.com/davidkretch">David Kretch</a> and <a href="https://github.com/adambanker">Adam Banker</a>.</p>
 <p><a href="https://aws.amazon.com/rekognition/">Amazon Rekognition</a> is a service for image and video analysis which comes with pre-trained deep learning models and a simple API which makes it easy for developers to add these analytics capabilities to their applications.</p>
 <p>Some of Amazon Rekognition&rsquo;s features include:</p>
 <ul>
@@ -125,7 +125,7 @@ Some of Amazon Rekognition&rsquo;s features include:
 <li>Text in image (e.g. useful to analyze text in posted social media images which are usually inaccessible for filters)</li>
 </ul>
 <p>In the examples below we will focus on how Rekognition&rsquo;s “text-in-image” and “face comparison” features work using R. Following along it will be easy for you to apply your new knowledge to using the other features later on your own.</p>
-<p>But first we need to make sure that our setup is complete.</p>
+<p>The entire code of this article is also part of the self-paced and fully reproducible AWS AI Services for R users workshop that you can <a href="https://github.com/alex23lemm/AWS-AI-Services-R-Workshop">download from GitHub here</a>.</p>
 <h2 id="prerequisites">Prerequisites</h2>
 <p>In short, you need to have an IAM user with programmatic access to the AWS API and you need to save the user&rsquo;s access key ID and secret access key as R environment variables:</p>
 <p><strong>AWS Cloud</strong></p>
@@ -156,7 +156,7 @@ AWS_REGION = [CHOOSE_A_REGION_ID_LIKE_us-east-1]
 <p><strong>Important</strong>: Both the paws documentation and the boto3 (official AWS SDK for Python) documentation mention to pass the images as base64-encoded images and not as raw bytes. Unfortunately, it seems that the documentation is not correct in either case because passing base64-encoded images in R did not work for me. <a href="https://stackoverflow.com/questions/47542341/how-do-i-convert-local-jpg-file-to-base64-to-work-with-boto3-and-detect-text">This Stack Overflow post</a>, where someone had the same issue in Python using boto3, made me switch successfully to passing raw bytes instead. So just make sure to think &ldquo;raw bytes&rdquo; every time you read &ldquo;base64-encoded&rdquo; in the paws or boto3 documentation of the Rekognition API.</p>
 <p>OK, enough talking! Let&rsquo;s get started.</p>
 <h2 id="loading-the-necessary-libraries">Loading the necessary libraries</h2>
-<p>First we load the necessary libraries: Using <code>paws</code> is a no brainer here. We will use <code>purrr</code>'s magic and <code>tibble</code> to parse the responses of our API requests. We will use <code>readr</code> primarily to read binary data of image files and <code>magick</code> to add Bounding Boxes to images after having received their coordinates via an API response.</p>
+<p>First we load the necessary libraries: Using <code>paws</code> is a no brainer here. We will use <code>purrr</code>&rsquo;s magic and <code>tibble</code> to parse the responses of our API requests. We will use <code>readr</code> primarily to read binary data of image files and <code>magick</code> to add Bounding Boxes to images after having received their coordinates via an API response.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">library</span>(paws)
 <span style="color:#a6e22e">library</span>(purrr)
 <span style="color:#a6e22e">library</span>(tibble)
@@ -164,9 +164,9 @@ AWS_REGION = [CHOOSE_A_REGION_ID_LIKE_us-east-1]
 <span style="color:#a6e22e">library</span>(magick)
 </code></pre></div><h2 id="creating-an-s3-bucket">Creating an S3 bucket</h2>
 <p>First we need to create an S3 bucket to which we will upload our image files. We&rsquo;ll create an S3 client and check if any buckets already exist in the region you specified in the <code>.Renviron</code> file:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#75715e"># Create S3 client</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#75715e"># Create S3 client</span>
 s3 <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">s3</span>()
-<span style="color:#75715e"># Let us check if there is an S3 bucket we could use</span>
+<span style="color:#75715e"># Let us check if there is an S3 bucket we could use</span>
 buckets <span style="color:#f92672">&lt;-</span> s3<span style="color:#f92672">$</span><span style="color:#a6e22e">list_buckets</span>()
 <span style="color:#a6e22e">length</span>(buckets<span style="color:#f92672">$</span>Buckets)
 </code></pre></div><pre><code>## [1] 0
@@ -230,10 +230,10 @@ buckets
 bucket_objects
 </code></pre></div><pre><code>## [1] &quot;tyrion_quote.jpg&quot;
 </code></pre><p>Perfect, everything worked as expected and our test file was uploaded successfully. Next, we need to create a Rekognition client for making the necessary API calls:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#75715e"># Create a Rekognition client</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#75715e"># Create a Rekognition client</span>
 rekognition <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">rekognition</span>()
 
-<span style="color:#75715e"># Referencing an image in an Amazon S3 bucket</span>
+<span style="color:#75715e"># Referencing an image in an Amazon S3 bucket</span>
 resp <span style="color:#f92672">&lt;-</span> rekognition<span style="color:#f92672">$</span><span style="color:#a6e22e">detect_text</span>(
   Image <span style="color:#f92672">=</span> <span style="color:#a6e22e">list</span>(
     S3Object <span style="color:#f92672">=</span> <span style="color:#a6e22e">list</span>(
@@ -243,7 +243,7 @@ resp <span style="color:#f92672">&lt;-</span> rekognition<span style="color:#f92
   )
 )
 
-<span style="color:#75715e"># Parsing the response</span>
+<span style="color:#75715e"># Parsing the response</span>
 resp <span style="color:#f92672">%&gt;%</span> 
   .[[<span style="color:#e6db74">&#34;TextDetections&#34;</span>]] <span style="color:#f92672">%&gt;%</span> 
   <span style="color:#a6e22e">keep</span>(<span style="color:#f92672">~</span>.[[<span style="color:#e6db74">&#34;Type&#34;</span>]] <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;WORD&#34;</span>) <span style="color:#f92672">%&gt;%</span> 
@@ -254,14 +254,14 @@ resp <span style="color:#f92672">%&gt;%</span>
 <h3 id="option-2-sending-the-image-as-bytes">Option 2: Sending the image as bytes</h3>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">image <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">read_file_raw</span>(<span style="color:#e6db74">&#34;./images/tyrion_quote.jpg&#34;</span>)
 
-<span style="color:#75715e"># Sending the image as raw bytes</span>
+<span style="color:#75715e"># Sending the image as raw bytes</span>
 resp <span style="color:#f92672">&lt;-</span> rekognition<span style="color:#f92672">$</span><span style="color:#a6e22e">detect_text</span>(
   Image <span style="color:#f92672">=</span> <span style="color:#a6e22e">list</span>(
     Bytes <span style="color:#f92672">=</span> image
   )
 )
 
-<span style="color:#75715e"># Parsing the response</span>
+<span style="color:#75715e"># Parsing the response</span>
 resp <span style="color:#f92672">%&gt;%</span> 
   .[[<span style="color:#e6db74">&#34;TextDetections&#34;</span>]] <span style="color:#f92672">%&gt;%</span> 
   <span style="color:#a6e22e">keep</span>(<span style="color:#f92672">~</span>.[[<span style="color:#e6db74">&#34;Type&#34;</span>]] <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;WORD&#34;</span>) <span style="color:#f92672">%&gt;%</span> 
@@ -281,11 +281,11 @@ resp <span style="color:#f92672">%&gt;%</span>
 </p>
 <p>Is our thief among these people and can Rekognition identify him correctly?</p>
 <p>We will skip uploading the two images to S3 and send them directly as raw bytes to the API endpoint. Uploading the images to S3 and referencing them for a facial comparison would work in the same manner as described above in the text-in-image detection demo.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#75715e"># Load raw images into memory</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#75715e"># Load raw images into memory</span>
 thief <span style="color:#f92672">&lt;-</span> readr<span style="color:#f92672">::</span><span style="color:#a6e22e">read_file_raw</span>(<span style="color:#e6db74">&#34;./images/thief.jpg&#34;</span>)
 suspects <span style="color:#f92672">&lt;-</span> readr<span style="color:#f92672">::</span><span style="color:#a6e22e">read_file_raw</span>(<span style="color:#e6db74">&#34;./images/usual_suspects.png&#34;</span>)
 
-<span style="color:#75715e"># Send images to the compare faces endpoint</span>
+<span style="color:#75715e"># Send images to the compare faces endpoint</span>
 resp <span style="color:#f92672">&lt;-</span> rekognition<span style="color:#f92672">$</span><span style="color:#a6e22e">compare_faces</span>(
   SourceImage <span style="color:#f92672">=</span> <span style="color:#a6e22e">list</span>(
     Bytes <span style="color:#f92672">=</span> thief
@@ -306,19 +306,19 @@ resp <span style="color:#f92672">&lt;-</span> rekognition<span style="color:#f92
 <p>We will use the <code>magick</code> package to add the bounding box of the person who Rekognition identified as the thief to the image of the suspects.</p>
 <p>For this we need to convert the suspects raw image which currently resides in our local memory into a magick image object. This step is necessary because we need to extract the pixel information of the suspect image using <code>magick::image_info()</code>. We will use the pixel information  together with the bounding box coordinates included in the response to calculate the bounding box properties (width, height, left, right).</p>
 <p>Once we have the bounding box properties we can add the bounding box to our suspects image using <code>magick</code>.</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#75715e"># Convert raw image into a magick object</span>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#75715e"># Convert raw image into a magick object</span>
 suspects <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">image_read</span>(suspects)
 
-<span style="color:#75715e"># Extract face match from the response</span>
+<span style="color:#75715e"># Extract face match from the response</span>
 match <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>FaceMatches[[1]]
 
-<span style="color:#75715e"># Calculate bounding box properties</span>
+<span style="color:#75715e"># Calculate bounding box properties</span>
 width <span style="color:#f92672">&lt;-</span> match<span style="color:#f92672">$</span>Face<span style="color:#f92672">$</span>BoundingBox<span style="color:#f92672">$</span>Width <span style="color:#f92672">*</span> <span style="color:#a6e22e">image_info</span>(suspects)<span style="color:#f92672">$</span>width 
 height <span style="color:#f92672">&lt;-</span> match<span style="color:#f92672">$</span>Face<span style="color:#f92672">$</span>BoundingBox<span style="color:#f92672">$</span>Height <span style="color:#f92672">*</span> <span style="color:#a6e22e">image_info</span>(suspects)<span style="color:#f92672">$</span>height
 left <span style="color:#f92672">&lt;-</span> match<span style="color:#f92672">$</span>Face<span style="color:#f92672">$</span>BoundingBox<span style="color:#f92672">$</span>Left <span style="color:#f92672">*</span> <span style="color:#a6e22e">image_info</span>(suspects)<span style="color:#f92672">$</span>width 
 top <span style="color:#f92672">&lt;-</span> match<span style="color:#f92672">$</span>Face<span style="color:#f92672">$</span>BoundingBox<span style="color:#f92672">$</span>Top <span style="color:#f92672">*</span> <span style="color:#a6e22e">image_info</span>(suspects)<span style="color:#f92672">$</span>height
 
-<span style="color:#75715e"># Add bounding box to suspects image</span>
+<span style="color:#75715e"># Add bounding box to suspects image</span>
 image <span style="color:#f92672">&lt;-</span> suspects <span style="color:#f92672">%&gt;%</span> 
   <span style="color:#a6e22e">image_draw</span>()
 <span style="color:#a6e22e">rect</span>(left, top, left <span style="color:#f92672">+</span> width, top <span style="color:#f92672">+</span> height, border <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;red&#34;</span>, lty <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;dashed&#34;</span>, lwd <span style="color:#f92672">=</span> <span style="color:#ae81ff">5</span>)
@@ -329,8 +329,6 @@ image
 <p>Second Hurray! Testing Rekognition&rsquo;s face comparison feature was also a success and the thief was identified correctly.</p>
 <h2 id="summary">Summary</h2>
 <p>It is great that Python&rsquo;s <code>boto3</code> finally has an R brother. The <code>paws</code> package makes it really easy to access Amazon Rekognition and other AWS services from R. R users can use image and video analysis capabilities without being experts in deep learning. The trickiest part when using <code>paws</code> is figuring out a clever way to parse the response coming from the API. But with the recipes and packages used above for parsing S3 and Rekognition API responses, you now should have have some best practices available on your end to get started quickly.</p>
-<p>The entire code of this article is also part of a self-paced and fully reproducible workshop that you can <a href="https://github.com/alex23lemm/AWS-AI-Services-R-Workshop">download from GitHub here</a>.</p>
-<p>Keep on building!</p>
 
       </div>
 
