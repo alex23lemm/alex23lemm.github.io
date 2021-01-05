@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Alex Lemm">
+    <meta name="description" content="Alex Lemm&#39;s personal website">
+    <meta name="keywords" content="blog,analytics,personal,r,datascience,aws">
+
+    <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Using Amazon Rekognition Custom Labels from R"/>
+<meta name="twitter:description" content="In this article we will demonstrate how to use Amazon Rekognition Custom Labels using the fabulous paws package, an AWS SDK for R, created by David Kretch and Adam Banker.
+You can use Rekognition Custom Labels to train your own machine learning models that perform image classification (image level predictions) or object detection (object/bounding box level predictions).
+We will train an object detection model to detect the Swoosh, Nike&rsquo;s famous logo that Carolyn Davidson designed in 1971."/>
+
+    <meta property="og:title" content="Using Amazon Rekognition Custom Labels from R" />
+<meta property="og:description" content="In this article we will demonstrate how to use Amazon Rekognition Custom Labels using the fabulous paws package, an AWS SDK for R, created by David Kretch and Adam Banker.
+You can use Rekognition Custom Labels to train your own machine learning models that perform image classification (image level predictions) or object detection (object/bounding box level predictions).
+We will train an object detection model to detect the Swoosh, Nike&rsquo;s famous logo that Carolyn Davidson designed in 1971." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://alex23lemm.github.io/posts/2021-01-03-using-amazon-rekognition-custom-labels-from-r/" />
+<meta property="article:published_time" content="2021-01-03T00:00:00+00:00" />
+<meta property="article:modified_time" content="2021-01-03T00:00:00+00:00" />
+
+
+    
+      <base href="https://alex23lemm.github.io/posts/2021-01-03-using-amazon-rekognition-custom-labels-from-r/">
+    
+    <title>
+  Using Amazon Rekognition Custom Labels from R · alex23lemm
+</title>
+
+    
+      <link rel="canonical" href="https://alex23lemm.github.io/posts/2021-01-03-using-amazon-rekognition-custom-labels-from-r/">
+    
+
+    <link href="https://fonts.googleapis.com/css?family=Lato:400,700%7CMerriweather:300,700%7CSource+Code+Pro:400,700" rel="stylesheet">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" integrity="sha256-l85OmPOjvil/SOvVt3HnSSjzF1TUMyT9eV0c2BzEGzU=" crossorigin="anonymous" />
+
+    
+      
+      
+      <link rel="stylesheet" href="https://alex23lemm.github.io/css/coder.min.28d751104f30c16da1aa1bb04015cbe662cacfe0d1b01af4f2240ad58580069c.css" integrity="sha256-KNdREE8wwW2hqhuwQBXL5mLKz&#43;DRsBr08iQK1YWABpw=" crossorigin="anonymous" media="screen" />
+    
+
+    
+
+    
+
+    
+
+    
+    
+    <link rel="icon" type="image/png" href="https://alex23lemm.github.io/images/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="https://alex23lemm.github.io/images/favicon-16x16.png" sizes="16x16">
+
+    <meta name="generator" content="Hugo 0.80.0" />
+  </head>
+
+  <body class=" ">
+    <main class="wrapper">
+      <nav class="navigation">
+  <section class="container">
+    <a class="navigation-title" href="https://alex23lemm.github.io/">
+      alex23lemm
+    </a>
+    <input type="checkbox" id="menu-toggle" />
+    <label class="menu-button float-right" for="menu-toggle"><i class="fas fa-bars"></i></label>
+    <ul class="navigation-list">
+      
+        
+          <li class="navigation-item">
+            <a class="navigation-link" href="https://alex23lemm.github.io/posts/">Blog</a>
+          </li>
+        
+      
+      
+    </ul>
+  </section>
+</nav>
+<link href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/atom-one-dark-reasonable.min.css" rel="stylesheet">
+
+
+      <div class="content">
+        
+  <section class="container post">
+    <article>
+      <header>
+        <div class="post-title">
+          <h1 class="title">Using Amazon Rekognition Custom Labels from R</h1>
+        </div>
+        <div class="post-meta">
+          <div class="date">
+            <span class="posted-on">
+              <i class="fas fa-calendar"></i>
+              <time datetime='2021-01-03T00:00:00Z'>
+                Jan 3, 2021
+              </time>
+            </span>
+            <span class="reading-time">
+              <i class="fas fa-clock"></i>
+              23 minutes read
+            </span>
+          </div>
+          
+          
+        </div>
+      </header>
+
+      <div>
+        <p>In this article we will demonstrate how to use Amazon Rekognition Custom Labels using the fabulous <a href="https://github.com/paws-r/paws">paws package</a>, an AWS SDK for R, created by <a href="https://github.com/davidkretch">David Kretch</a> and <a href="https://github.com/adambanker">Adam Banker</a>.</p>
+<p>You can use Rekognition Custom Labels to train your own machine learning models that perform image classification (image level predictions) or object detection (object/bounding box level predictions).</p>
+<p>We will train an object detection model to detect the Swoosh, Nike&rsquo;s famous logo that Carolyn Davidson designed in 1971.</p>
+<p align="center">
+<img src="./images/nike_logo.png" width="40%" />
+</p>
+<p>The process of using Rekognition Custom Labels to train, evaluate, deploy and use image classification or object detection models is the same and consists of the following steps:</p>
+<ul>
+<li>Step 0: Collect and preprocess your image data</li>
+<li>Step 1: Create an S3 Rekognition Custom Labels default bucket in your region</li>
+<li>Step 2: Upload your dataset to S3</li>
+<li>Step 3: Create a Rekognition Custom Labels dataset</li>
+<li>Step 4: Create your project</li>
+<li>Step 5: Train your model</li>
+<li>Step 6: Evaluate the training results</li>
+<li>Step 7: Deploy your model</li>
+<li>Step 8: Make real-time predictions for new data</li>
+<li>Step 9: Stop your model</li>
+</ul>
+<p>We will follow the steps described above to build our Swoosh detection model. Not all of the steps are supported by the Rekognition API. If necessary, we will switch over to the Amazon Rekognition Custom Labels console.</p>
+<p>The entire code of this article is also part of the self-paced and fully reproducible AWS AI Services for R users workshop that you can <a href="https://github.com/alex23lemm/AWS-AI-Services-R-Workshop">download from GitHub here</a>.</p>
+<blockquote>
+<p><strong>Info</strong></p>
+<p>At the time of writing this article in December 2020, Amazon Rekognition Custom Labels is available in 4 regions: 
+us-east-1 (N. Virginia), us-east-2 (Ohio), us-west-2 (Oregon), and eu-west-1 (Ireland).
+Please make sure to update the <code>AWS_REGION</code> entry in your <code>.Renviron</code> file in case you configured another AWS region.</p>
+<p>Amazon Rekognition Custom Labels is currently also part of the AWS Free Tier which means you can get started for free:
+The <a href="https://aws.amazon.com/rekognition/pricing/">service-specific Free Tier</a> lasts 3 months and includes 10 free 
+training hours per month and 4 free inference hours per month.</p>
+</blockquote>
+<h2 id="prerequisites">Prerequisites</h2>
+<p>In short, you need to have an IAM user with programmatic access to the AWS API and you need to save the user&rsquo;s access key ID and secret access key as R environment variables:</p>
+<p><strong>AWS Cloud</strong></p>
+<ul>
+<li>
+<p>It is a little plus if you have some basic familiarity with the AWS Console.</p>
+</li>
+<li>
+<p>You need to have access to an AWS account using an IAM user. <a href="https://aws.amazon.com/free/">AWS Free Tier</a> does also work for this workshop.</p>
+</li>
+<li>
+<p>The IAM user needs to come with <a href="https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys">security credentials</a> (Access key ID, Secret access key) that allows him to make secure requests to AWS service APIs.</p>
+</li>
+<li>
+<p>You need to make sure that the <code>AmazonRekognitionFullAccess</code> policy is either attached to your IAM user directly or to a group your user is a member of. See <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_change-permissions.html">the official documentation</a> for changing permissions for an IAM user.</p>
+</li>
+</ul>
+<p><strong>Local installations &amp; configuration</strong></p>
+<ul>
+<li>Install <code>paws</code> from CRAN using <code>install.packages(&quot;paws&quot;) </code> and set the following environment variables in your <code>.Renviron</code> file which is easiest to do using <code>usethis::edit_r_environ()</code>:</li>
+</ul>
+<pre><code class="language-{r}" data-lang="{r}">AWS_ACCESS_KEY_ID = [YOUR_ACCESS_KEY_ID]
+AWS_SECRET_ACCESS_KEY = [YOUR_SECRET_ACCESS_KEY]
+AWS_REGION = [CHOOSE_A_REGION_ID_LIKE_us-east-1]
+</code></pre><h2 id="load-the-necessary-libraries">Load the necessary libraries</h2>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">library</span>(paws)
+<span style="color:#a6e22e">library</span>(purrr)
+<span style="color:#a6e22e">library</span>(readr)
+<span style="color:#a6e22e">library</span>(tibble)
+<span style="color:#a6e22e">library</span>(jsonlite)
+<span style="color:#a6e22e">library</span>(stringi)
+<span style="color:#a6e22e">library</span>(tidyr)
+<span style="color:#a6e22e">library</span>(dplyr)
+<span style="color:#a6e22e">library</span>(magick)
+</code></pre></div><h2 id="step-0-collect-and-preprocess-your-image-data">Step 0: Collect and preprocess your image data</h2>
+<p>We collected 75 free and publicly available images containing the Nike Swoosh logo from <a href="https://www.pexels.com/">pexels.com</a>, preprocessed/scaled the images, and uploaded 70 of the preprocessed images as a dataset to Kaggle that we will use to train the Swoosh detector model. The remaining 5 of the pre-processed images come with this repository as a hold-out test set for making real-time predictions.</p>
+<p>Please <a href="https://www.kaggle.com/alex23lemm/nike-swoosh-compilation">navigate to the Nike Swoosh Compilation dataset</a> on Kaggle, click on the page&rsquo;s <strong>Download</strong> button,  and unzip <strong>archive.zip</strong> once the download is complete.</p>
+<p>The compilation below shows some of the images we collected:</p>
+<p align="center">
+<img src="./images/swoosh_compilation.png" width="70%" />
+</p>
+<blockquote>
+<p><strong>Info</strong></p>
+<p>The minimum and the maximum image dimension of images used for training jobs and for inference with 
+Rekognition Custom Labels is 64 pixels x 64 pixels and 4096 pixels x 4096 pixels respectively. 
+Always scale your images accordingly before you use Amazon Rekognition Custom Labels.</p>
+<p>Additional requirements like supported image file formats, maximum image size, maximum number 
+of labels per image are described <a href="https://docs.aws.amazon.com/rekognition/latest/customlabels-dg/limits.html">in the official documentation here</a>.</p>
+</blockquote>
+<p>We used the purrr-EBImage-recipe below to scale the images from Pexels below the 4096 pixels threshold before we uploaded them to Kaggle. You can use the recipe in your future Rekognition Custom Labels projects:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">library</span>(EBImage)
+<span style="color:#a6e22e">library</span>(purrr)
+
+source_folder <span style="color:#f92672">&lt;-</span> <span style="color:#e6db74">&#34;./[folder_of_images_to_be_scaled]&#34;</span>
+target_folder <span style="color:#f92672">&lt;-</span> <span style="color:#e6db74">&#34;./[folder_to_save_scaled_images/]&#34;</span>
+
+<span style="color:#a6e22e">walk</span>(file_names, <span style="color:#a6e22e">function</span>(x) {
+  img <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">readImage</span>(<span style="color:#a6e22e">paste0</span>(source_folder, <span style="color:#e6db74">&#34;/&#34;</span>, x))
+  img_dim <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">dim</span>(img)
+  index <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">which.max</span>(img_dim)
+  
+  <span style="color:#a6e22e">if</span>(img_dim[index] <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">4096</span>) {
+    scale_fct <span style="color:#f92672">&lt;-</span> <span style="color:#ae81ff">4096</span> <span style="color:#f92672">/</span> img_dim[index]
+    img <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">resize</span>(img, w <span style="color:#f92672">=</span> img_dim[1] <span style="color:#f92672">*</span> scale_fct, h <span style="color:#f92672">=</span> img_dim[2] <span style="color:#f92672">*</span> scale_fct)
+  }
+  <span style="color:#a6e22e">writeImage</span>(img, <span style="color:#a6e22e">paste0</span>(target_folder, <span style="color:#e6db74">&#34;/&#34;</span>, x), quality <span style="color:#f92672">=</span> <span style="color:#ae81ff">95</span>)
+})
+</code></pre></div><h2 id="step-1-create-s3-rekognition-custom-labels-default-bucket">Step 1: Create S3 Rekognition Custom Labels default bucket</h2>
+<p>Creating the default S3 Rekognition Custom Labels bucket is an one-time step per region in which you like to use Amazon Rekognition Custom Labels. You don&rsquo;t need to repeat this step afterwards.</p>
+<p>In the AWS console select <strong>Amazon Rekognition</strong> underneath services and then select <strong>Use Custom Labels</strong> in the left sidebar. Click on <strong>Get started</strong> in the middle of the Amazon Rekognition Custom Labels console and then on <strong>Create S3 bucket</strong> to create your Rekognition Custom Labels default bucket in your region:</p>
+<p><img src="./images/console/00_set_up_default_bucket.png" width="70%" /></p>
+<p>You can safely ignore the prompt in the console to create your first Custom Labels project. We will do this later via the API.</p>
+<p>Next, we create an S3 client to retrieve the name of our S3 Rekognition Custom Labels default bucket you just created. We will need the S3 bucket name later.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">s3 <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">s3</span>()
+region <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">Sys.getenv</span>(<span style="color:#e6db74">&#34;AWS_REGION&#34;</span>)
+
+custom_labels_bucket <span style="color:#f92672">&lt;-</span> s3<span style="color:#f92672">$</span><span style="color:#a6e22e">list_buckets</span>() <span style="color:#f92672">%&gt;%</span> 
+  .[[<span style="color:#e6db74">&#34;Buckets&#34;</span>]] <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">map_chr</span>(<span style="color:#e6db74">&#34;Name&#34;</span>) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">keep</span>(<span style="color:#a6e22e">function</span>(x) <span style="color:#a6e22e">startsWith</span>(x, <span style="color:#a6e22e">paste0</span>(<span style="color:#e6db74">&#34;custom-labels-console-&#34;</span>, region)))
+</code></pre></div><h2 id="step-2-upload-your-dataset">Step 2: Upload your dataset</h2>
+<p>We will create a new folder <strong>/assets</strong> in our S3 Custom Labels default bucket to which we will upload the Swoosh dataset.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">s3<span style="color:#f92672">$</span><span style="color:#a6e22e">put_object</span>(Bucket <span style="color:#f92672">=</span> custom_labels_bucket, Key <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/assets/&#34;</span>, Body <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;&#34;</span>)
+</code></pre></div><p>Next, we will switch over to the S3 console and upload the unzipped folder <strong>swoosh_data</strong> of Swoosh images we downloaded from Kaggle.</p>
+<p>Navigate to the <strong>/assets</strong> folder we just created and click on <strong>Upload</strong>:</p>
+<p><img src="./images/console/01_select_upload.png" width="55%" /></p>
+<p>Click on <strong>Add folder</strong> and select the <strong>/swoosh_data</strong> folder on your file system:</p>
+<p><img src="./images/console/02_select_add_folder.png" width="70%" /></p>
+<p><strong>Important:</strong> Back on the Upload page, make sure to scroll down and click on <strong>Upload</strong>:</p>
+<p><img src="./images/console/03_press_upload_button.png" width="70%" /></p>
+<p>After the upload, the S3 folder structure should look like this and the <strong>/train</strong> subfolder should contain 70 images:</p>
+<p><img src="./images/console/04_post_S3_upload.png" width="85%" /></p>
+<h2 id="step-3-create-a-rekognition-custom-labels-dataset">Step 3: Create a Rekognition Custom Labels dataset</h2>
+<p>Now, We will create a Rekognition Custom Labels dataset. A Rekognition Custom Labels dataset references the training/test dataset residing in S3 and allows you to add labels/bounding box metadata to your images. The labeling process will generate a manifest file that includes (1) the respective labels/bounding box information and (2) the references to the images stored in S3. Without a manifest file we won&rsquo;t be able to start a Rekognition Custom Labels training job.</p>
+<p>You can only create Rekognition Custom Labels datasets by using the Amazon Rekognition Custom Labels console. However, instead of creating the image labels/bounding boxes from scratch which is a kind of cumbersome manual process, you can also create a Custom Labels dataset based on an existing manifest file that already includes the respective label/bounding box information of your dataset.</p>
+<p>And you&rsquo;re lucky: We already created the manifest file with the necessary information for you. This will save you approximately 30-40 minutes and you won&rsquo;t need to draw bounding boxes yourself.</p>
+<h3 id="step-31-edit-and-upload-the-manifest-file">Step 3.1: Edit and upload the manifest file</h3>
+<p>On your machine:</p>
+<ul>
+<li>
+<p>Open the manifest file <strong>output.manifest</strong> in <strong>./04_Rekognition_Custom_Labels_and_R/assets/</strong> on your machine.</p>
+</li>
+<li>
+<p>Replace the beginning of <strong>ALL</strong> 70 <code>s3://[YOUR_CUSTOM_LABELS_DEFAULT_BUCKET]/...</code> resource identifiers with the correct name of your S3 Rekognition Custom Labels default bucket. You can get the bucket name by printing  <code>custom_labels_bucket</code> to the R console. Save and close the manifest file.</p>
+</li>
+</ul>
+<p>Navigate to the <strong>S3 console</strong>. Upload the updated manifest file to the root folder of your Rekognition Custom Labels default bucket:</p>
+<p><img src="./images/console/05_upload_manifest_file.png" width="50%" /></p>
+<h3 id="step-32-create-custom-labels-dataset-based-on-uploaded-manifest-file">Step 3.2: Create Custom Labels dataset based on uploaded manifest file</h3>
+<p>Navigate to the <strong>Rekognition Custom Labels console</strong>. Click on <strong>Datasets</strong> in the left sidebar and then on <strong>Create dataset</strong>. Specify the following:</p>
+<ul>
+<li>
+<p><strong>Dataset name</strong>: swoosh_dataset</p>
+</li>
+<li>
+<p><strong>Image location</strong>: Select <strong>Import images labeled by Amazon SageMaker Ground Truth</strong></p>
+</li>
+<li>
+<p><strong>.manifest file location</strong>: The S3 path to the manifest file we uploaded in the previous step</p>
+</li>
+</ul>
+<p>After that, click on <strong>Submit</strong> at the bottom of the page:</p>
+<p><img src="./images/console/06_create_dataset_via_manifest_file.png" width="80%" /></p>
+<h3 id="step-33-check-image-labels-and-new-manifest-file">Step 3.3: Check image labels and new manifest file</h3>
+<p>In the Rekognition Custom Labels console you should find the generated Swoosh_dataset underneath <strong>Datasets</strong>. All 70 images of the dataset should include the respective label/bounding box information:</p>
+<p><img src="./images/console/07_dataset_after_manifest_import.png" width="85%" /></p>
+<p><strong>Important</strong>: Using an existing manifest file to create a Custom Labels dataset will also create a NEW manifest file <strong>output.manifest</strong> in your Custom Labels S3 default bucket underneath <code>[YOUR_CUSTOM_LABELS_DEFAULT_BUCKET]/datasets/swoosh_dataset/manifests/output</code>. This new manifest file will be the one that we&rsquo;ll pass as a parameter when starting the training job later:</p>
+<p><img src="./images/console/08_swoosh_dataset_manifest.png" width="60%" /></p>
+<h2 id="step-4-create-your-project">Step 4: Create your project</h2>
+<p>Rekognition Custom Labels projects help you to manage the life cycle of your machine learning models. A trained model always belongs to one project. A project just serves as an umbrella under which you train, deploy and manage one or more image classification/object detection models.</p>
+<p>We will initialize a Rekognition client and create our first Custom Labels project via the API:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">rek <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">rekognition</span>()
+
+project_name <span style="color:#f92672">&lt;-</span> <span style="color:#e6db74">&#34;swoosh_detector&#34;</span>
+project_arn <span style="color:#f92672">&lt;-</span> rek<span style="color:#f92672">$</span><span style="color:#a6e22e">create_project</span>(project_name)
+</code></pre></div><p><code>create_project()</code> returns the project&rsquo;s Amazon Resource Name (ARN). We will store it in a separate variable which we will need later when defining the training job for our Swoosh detection model.</p>
+<p>Alternatively, you can also use the following code snipped to retrieve the entire list of your Rekognition Custom Labels projects and select the project ARN of your choice:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">rek<span style="color:#f92672">$</span><span style="color:#a6e22e">describe_projects</span>() <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">pluck</span>(<span style="color:#e6db74">&#34;ProjectDescriptions&#34;</span>) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">map_chr</span>(<span style="color:#e6db74">&#34;ProjectArn&#34;</span>)
+</code></pre></div><h2 id="step-5-train-your-model">Step 5: Train your model</h2>
+<p>You train a model by calling <code>create_project_version()</code> which is not the most intuitive function name in this context. To train a model, the following information is needed:</p>
+<ul>
+<li>
+<p><strong>Name</strong>: A unique name for the model. Best practice is to use a <strong>project name - timestamp combination</strong> for the model name.</p>
+</li>
+<li>
+<p><strong>Project ARN</strong>: The Amazon Resource Name (ARN) of the project that will manage the model lifecycle and which we stored in <code>project_arn</code>.</p>
+</li>
+<li>
+<p><strong>Training dataset</strong>: A manifest file with the S3 location of the training image dataset and the image labeling information. This is the manifest file that was generated in <code>datasets/swoosh_dataset/manifests/output/output.manifest</code> when we created the Rekognition Custom Labels dataset in the step 3 above.</p>
+</li>
+<li>
+<p><strong>Test dataset</strong> (optional): A manifest file of the test set generated like the training set manifest file via the Rekognition Custom Labels console. If not provided, Rekognition Custom Labels creates a test dataset with a random 80/20 split of the training dataset which is the option we will use here by setting <code>AutoCreate = TRUE</code> below.</p>
+</li>
+<li>
+<p><strong>Training results location</strong> – The Amazon S3 location where the training results are stored. We will store the results of training jobs in dedicated subfolders <code>/output_folder/[project name]/[model name]</code> in our S3 Rekognition Custom Labels default bucket.</p>
+</li>
+</ul>
+<blockquote>
+<p><strong>Info</strong></p>
+<p>Before you start the training job by executing the code chunk below, make sure to get a coffee. 
+The training time for the Swoosh Detector model will be approximately one hour.</p>
+</blockquote>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">model_name <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(project_name, <span style="color:#e6db74">&#34;.&#34;</span>, <span style="color:#a6e22e">format</span>(<span style="color:#a6e22e">Sys.time</span>(), <span style="color:#e6db74">&#34;%Y-%m-%dT%H.%M.%S&#34;</span>))
+manifest_location <span style="color:#f92672">&lt;-</span> <span style="color:#e6db74">&#34;datasets/swoosh_dataset/manifests/output/output.manifest&#34;</span>
+output_folder <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(<span style="color:#e6db74">&#34;output_folder/&#34;</span>, project_name, <span style="color:#e6db74">&#34;/&#34;</span>,  model_name)
+
+model_arn <span style="color:#f92672">&lt;-</span> rek<span style="color:#f92672">$</span><span style="color:#a6e22e">create_project_version</span>(ProjectArn <span style="color:#f92672">=</span> project_arn, 
+                                        VersionName <span style="color:#f92672">=</span> model_name, 
+                                        OutputConfig <span style="color:#f92672">=</span> <span style="color:#a6e22e">list</span>(
+                                          S3Bucket <span style="color:#f92672">=</span> custom_labels_bucket,
+                                          S3KeyPrefix <span style="color:#f92672">=</span> output_folder                 
+                                        ),
+                                        TrainingData <span style="color:#f92672">=</span> <span style="color:#a6e22e">list</span>(
+                                          Assets <span style="color:#f92672">=</span> <span style="color:#a6e22e">list</span>(
+                                            <span style="color:#a6e22e">list</span>(
+                                              GroundTruthManifest <span style="color:#f92672">=</span> <span style="color:#a6e22e">list</span>(
+                                                S3Object <span style="color:#f92672">=</span> <span style="color:#a6e22e">list</span>(
+                                                  Bucket <span style="color:#f92672">=</span> custom_labels_bucket,
+                                                  Name <span style="color:#f92672">=</span> manifest_location
+                                                )
+                                              )
+                                            )
+                                          )
+                                        ),
+                                        TestingData <span style="color:#f92672">=</span> <span style="color:#a6e22e">list</span>(
+                                          AutoCreate <span style="color:#f92672">=</span> <span style="color:#66d9ef">TRUE</span>
+                                        )
+)
+</code></pre></div><p>The response from <code>create_project_version()</code> is the ARN of the trained Swoosh detector model. You will use the model ARN in subsequent API requests when deploying the trained model, making real-time predictions, and stopping the running model.</p>
+<p>Use the following command to get the current status of the training job. Training is complete when the status is <code>TRAINING_COMPLETED</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">training_results <span style="color:#f92672">&lt;-</span> rek<span style="color:#f92672">$</span><span style="color:#a6e22e">describe_project_versions</span>(ProjectArn <span style="color:#f92672">=</span> project_arn,
+                              VersionNames <span style="color:#f92672">=</span> <span style="color:#a6e22e">list</span>(
+                                model_name
+                              )
+)
+training_status <span style="color:#f92672">&lt;-</span> training_results <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">pluck</span>(<span style="color:#e6db74">&#34;ProjectVersionDescriptions&#34;</span>, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">&#34;Status&#34;</span>)
+training_status
+</code></pre></div><pre><code>## [1] &quot;TRAINING_COMPLETED&quot;
+</code></pre><h2 id="step-6-evaluate-the-training-results">Step 6: Evaluate the training results</h2>
+<p>Once the training job completed successfully, we can evaluate the model performance metrics on the test set. Amazon Rekognition Custom Labels provides various model performance metrics for object detection models: (1) Metrics for the test set as a whole and (2) metrics for each predicted bounding box in your test set.</p>
+<p>Via the API we can quickly have a look at the F1 score:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">eval_results <span style="color:#f92672">&lt;-</span> training_results<span style="color:#f92672">$</span>ProjectVersionDescriptions[[1]] <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">pluck </span>(<span style="color:#e6db74">&#34;EvaluationResult&#34;</span>)
+eval_results
+</code></pre></div><pre><code>## $F1Score
+## [1] 0.6461539
+## 
+## $Summary
+## $Summary$S3Object
+## $Summary$S3Object$Bucket
+## [1] &quot;custom-labels-console-us-east-1-8946b80ccb&quot;
+## 
+## $Summary$S3Object$Name
+## [1] &quot;output_folder/swoosh_detector/swoosh_detector.2020-12-13T22.50.45/EvaluationResultSummary-swoosh_detector-swoosh_detector.2020-12-13T22.50.45.json&quot;
+## 
+## $Summary$S3Object$Version
+## character(0)
+</code></pre><p>The F1 score is 0.646 for our Swoosh detector model. All other model performance metrics are accessible via the Console or via downloading the evaluation results summary file which we will do below:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">eval_summary <span style="color:#f92672">&lt;-</span> s3<span style="color:#f92672">$</span><span style="color:#a6e22e">get_object</span>(Bucket <span style="color:#f92672">=</span> custom_labels_bucket,
+                              Key <span style="color:#f92672">=</span> eval_results<span style="color:#f92672">$</span>Summary<span style="color:#f92672">$</span>S3Object<span style="color:#f92672">$</span>Name,
+                              ResponseContentType <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;json&#34;</span>) <span style="color:#f92672">%&gt;%</span> 
+  .$Body <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">rawToChar</span>() <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">fromJSON</span>()
+</code></pre></div><p>Now, let us have a look at the other metrics:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">eval_summary<span style="color:#f92672">$</span>EvaluationDetails<span style="color:#f92672">$</span>NumberOfTrainingImages
+</code></pre></div><pre><code>## [1] 56
+</code></pre><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">eval_summary<span style="color:#f92672">$</span>EvaluationDetails<span style="color:#f92672">$</span>NumberOfTestingImages
+</code></pre></div><pre><code>## [1] 14
+</code></pre><p>We see that 56 images went into the training set and 14 images into the test set. This matches the 80/20 split of our data set of 70 images when we set <code>AutoCreate = TRUE</code> during the training job specification.</p>
+<p>The parsed evaluation summary results also include various model performance metrics besides just the F1 score:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">eval_summary <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">pluck</span>(<span style="color:#e6db74">&#34;LabelEvaluationResults&#34;</span>, <span style="color:#e6db74">&#34;Metrics&#34;</span>) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">mutate</span>(
+    AverageRecall <span style="color:#f92672">=</span> eval_summary<span style="color:#f92672">$</span>AggregatedEvaluationResults<span style="color:#f92672">$</span>AverageRecall,
+    AveragePrecision <span style="color:#f92672">=</span> eval_summary<span style="color:#f92672">$</span>AggregatedEvaluationResults<span style="color:#f92672">$</span>AveragePrecision
+  ) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">relocate</span>(AverageRecall, AveragePrecision, Recall, Precision, F1Score, Threshold) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">pivot_longer</span>(cols <span style="color:#f92672">=</span> <span style="color:#a6e22e">everything</span>())
+</code></pre></div><pre><code>## # A tibble: 6 x 2
+##   name             value
+##   &lt;chr&gt;            &lt;dbl&gt;
+## 1 AverageRecall    0.941
+## 2 AveragePrecision 0.609
+## 3 Recall           0.7  
+## 4 Precision        0.6  
+## 5 F1Score          0.646
+## 6 Threshold        0.258
+</code></pre><p>According to the <a href="https://docs.aws.amazon.com/rekognition/latest/customlabels-dg/tr-metrics-use.html">official documentation</a> all model performance metrics are calculated in the manner you would expect. The <code>Threshold</code> above is the value with which a prediction is counted as a true or false positive and is set based on the test set.</p>
+<p>Each image of the test set has one or more ground truth bounding boxes. The Swoosh object detector, as an object detection model, predicts bounding boxes in an image. Each predicted bounding box is associated with a confidence score. There are three types of bounding box predictions:</p>
+<ul>
+<li>
+<p><strong>True Positives (TP)</strong>: The object <strong>is there</strong> and the model <strong>detects</strong> it with a bounding box associated with a confidence score <strong>above the threshold</strong>.</p>
+</li>
+<li>
+<p><strong>False Negatives (FN)</strong>: The object <strong>is there</strong> and the model does <strong>not detect</strong> it OR the object <strong>is there</strong> and the model <strong>detects</strong> it with a bounding associated with a confidence score <strong>below the threshold</strong></p>
+</li>
+<li>
+<p><strong>False Positives (FP)</strong>:  The object <strong>is not there</strong> but the model <strong>detects</strong> one.</p>
+</li>
+</ul>
+<p>We will have a look at the individual bounding box predictions in each image of the test set. For this, we will download and parse yet another JSON file that includes the details for each predicted bounding box:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">test_set_results_file <span style="color:#f92672">&lt;-</span> training_results<span style="color:#f92672">$</span>ProjectVersionDescriptions[[1]] <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">pluck</span>(<span style="color:#e6db74">&#34;TestingDataResult&#34;</span>, <span style="color:#e6db74">&#34;Output&#34;</span>, <span style="color:#e6db74">&#34;Assets&#34;</span>, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">&#34;GroundTruthManifest&#34;</span>, <span style="color:#e6db74">&#34;S3Object&#34;</span>, <span style="color:#e6db74">&#34;Name&#34;</span>)
+
+test_set_results <span style="color:#f92672">&lt;-</span> s3<span style="color:#f92672">$</span><span style="color:#a6e22e">get_object</span>(Bucket <span style="color:#f92672">=</span> custom_labels_bucket,
+                                       Key <span style="color:#f92672">=</span> test_set_results_file,
+                                       ResponseContentType <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;json&#34;</span>) <span style="color:#f92672">%&gt;%</span> 
+  .$Body <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">rawToChar</span>() <span style="color:#f92672">%&gt;%</span>
+  <span style="color:#75715e"># The next three lines transform the ndjson formatted response into json</span>
+  stringi<span style="color:#f92672">::</span><span style="color:#a6e22e">stri_replace_last_fixed</span>(., <span style="color:#e6db74">&#34;\n&#34;</span>, <span style="color:#e6db74">&#34;&#34;</span>) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">gsub</span>(<span style="color:#e6db74">&#39;\n&#39;</span>, <span style="color:#e6db74">&#39;,&#39;</span>, ., fixed<span style="color:#f92672">=</span><span style="color:#66d9ef">TRUE</span>) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">paste0</span>(<span style="color:#e6db74">&#39;[&#39;</span>, ., <span style="color:#e6db74">&#39;]&#39;</span>) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">fromJSON</span>()
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">image_ids <span style="color:#f92672">&lt;-</span> test_set_results<span style="color:#f92672">$</span>`rekognition-custom-labels-object-id`
+file_names <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">sub</span>(<span style="color:#e6db74">&#34;.*[/@]&#34;</span>, <span style="color:#e6db74">&#34;&#34;</span>, test_set_results<span style="color:#f92672">$</span>`source-ref`)
+object_list <span style="color:#f92672">&lt;-</span> test_set_results<span style="color:#f92672">$</span>`rekognition-custom-labels-evaluation-metadata`<span style="color:#f92672">$</span>objects
+l <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">list</span>(.x <span style="color:#f92672">=</span> image_ids, .y <span style="color:#f92672">=</span> object_list, .z <span style="color:#f92672">=</span> file_names)
+
+eval_test_set_df <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">pmap_dfr</span>(l, <span style="color:#a6e22e">function</span>(.x, .y, .z) {
+       df <span style="color:#f92672">&lt;-</span> .y<span style="color:#f92672">$</span>`rekognition-custom-labels-evaluation-details` <span style="color:#f92672">%&gt;%</span> 
+         <span style="color:#a6e22e">select</span>(<span style="color:#a6e22e">starts_with</span>(<span style="color:#e6db74">&#34;is-&#34;</span>)) <span style="color:#f92672">%&gt;%</span> 
+         <span style="color:#a6e22e">mutate</span>(
+           file_name <span style="color:#f92672">=</span> .z, 
+           image_id <span style="color:#f92672">=</span> .x,
+           box_id <span style="color:#f92672">=</span> <span style="color:#a6e22e">seq.int</span>(<span style="color:#ae81ff">0</span>, <span style="color:#a6e22e">nrow</span>(.y)<span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>)
+         ) <span style="color:#f92672">%&gt;%</span> 
+         <span style="color:#a6e22e">relocate</span>(file_name, image_id, box_id)
+       df
+     })
+
+eval_test_set_df<span style="color:#f92672">$</span>confidence_score <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">map</span>(test_set_results<span style="color:#f92672">$</span>`rekognition-custom-labels-evaluation-metadata`<span style="color:#f92672">$</span>objects, 
+                                <span style="color:#e6db74">&#34;confidence&#34;</span>) <span style="color:#f92672">%&gt;%</span> <span style="color:#a6e22e">flatten_dbl</span>()
+</code></pre></div><p>The parsed response below shows us the test set results per predicted bounding box (<code>box_id</code>) grouped by image (<code>image_id</code>):</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">select</span>(eval_test_set_df, <span style="color:#f92672">-</span>file_name, <span style="color:#f92672">-</span>`is-true-negative`) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">head</span>()
+</code></pre></div><pre><code>##   image_id box_id is-true-positive is-false-positive is-false-negative
+## 1        1      0             TRUE             FALSE             FALSE
+## 2        2      0            FALSE             FALSE              TRUE
+## 3        2      1            FALSE              TRUE             FALSE
+## 4        3      0             TRUE             FALSE             FALSE
+## 5        3      1             TRUE             FALSE             FALSE
+## 6        4      0             TRUE             FALSE             FALSE
+##   is-present-in-ground-truth confidence_score
+## 1                       TRUE          0.96415
+## 2                       TRUE          0.00914
+## 3                      FALSE          0.29019
+## 4                       TRUE          0.32331
+## 5                       TRUE          0.31989
+## 6                       TRUE          0.88223
+</code></pre><p>The image and bounding box identifiers match the ones you will find when evaluating the individual image prediction results via the Rekognition Custom Labels Console. We will use the fifth image of our test set to illustrate this fact:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">eval_test_set_df <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">filter</span>(image_id <span style="color:#f92672">==</span> <span style="color:#ae81ff">5</span>) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">select</span>(<span style="color:#f92672">-</span>`is-true-negative`, <span style="color:#f92672">-</span>`is-false-positive`)
+</code></pre></div><pre><code>##                       file_name image_id box_id is-true-positive
+## 1 pexels-kaique-rocha-48262.jpg        5      0             TRUE
+## 2 pexels-kaique-rocha-48262.jpg        5      1            FALSE
+##   is-false-negative is-present-in-ground-truth confidence_score
+## 1             FALSE                       TRUE          0.97086
+## 2              TRUE                       TRUE          0.01341
+</code></pre><p><img src="./images/console/09_evaluate_test_set_image.png" width="55%" /></p>
+<p>We can now start analyzing the test set results in more detail:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">test_set_summary <span style="color:#f92672">&lt;-</span> eval_test_set_df <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">select</span>(<span style="color:#a6e22e">starts_with</span>(<span style="color:#e6db74">&#34;is-&#34;</span>), <span style="color:#f92672">-</span>`is-true-negative`) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">summarise</span>(<span style="color:#a6e22e">across</span>(<span style="color:#a6e22e">where</span>(is.logical), sum))
+
+test_set_summary
+</code></pre></div><pre><code>##   is-true-positive is-false-positive is-false-negative is-present-in-ground-truth
+## 1               13                 7                 4                         17
+</code></pre><p>As you can see, we have 17 ground truth bounding boxes in the 14 images of our test set. The Swoosh detector model detected 13 (True Positives) labels correctly and missed to detect 4 (False Negatives). In total, the model falsely detected 7 (False Positives) Swooshes which were not part of the images.</p>
+<p>Let us check out the False Positives a bit more:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">eval_test_set_df <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">filter</span>(`is-false-positive` <span style="color:#f92672">==</span> <span style="color:#66d9ef">TRUE</span>) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">select</span>(<span style="color:#f92672">-</span>file_name, <span style="color:#f92672">-</span>`is-true-positive`, <span style="color:#f92672">-</span>`is-true-negative`, <span style="color:#f92672">-</span>`is-false-negative`)
+</code></pre></div><pre><code>##   image_id box_id is-false-positive is-present-in-ground-truth confidence_score
+## 1        2      1              TRUE                      FALSE          0.29019
+## 2        6      0              TRUE                      FALSE          0.28191
+## 3        6      1              TRUE                      FALSE          0.56933
+## 4        6      3              TRUE                      FALSE          0.60150
+## 5        8      1              TRUE                      FALSE          0.42785
+## 6       12      1              TRUE                      FALSE          0.39023
+## 7       14      1              TRUE                      FALSE          0.83339
+</code></pre><p>We see that 3 of the 7 False Positives were caused just by a single image in our test set.</p>
+<p>Based on the individual bounding box predictions, we are even able to calculate the model performance metrics ourselves:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">recall <span style="color:#f92672">&lt;-</span> test_set_summary<span style="color:#f92672">$</span>`is-true-positive` <span style="color:#f92672">/</span> (test_set_summary<span style="color:#f92672">$</span>`is-true-positive` <span style="color:#f92672">+</span> test_set_summary<span style="color:#f92672">$</span>`is-false-negative`)
+precision <span style="color:#f92672">&lt;-</span> test_set_summary<span style="color:#f92672">$</span>`is-true-positive` <span style="color:#f92672">/</span> (test_set_summary<span style="color:#f92672">$</span>`is-false-positive` <span style="color:#f92672">+</span> test_set_summary<span style="color:#f92672">$</span>`is-true-positive`)
+f1_score <span style="color:#f92672">&lt;-</span> (recall <span style="color:#f92672">*</span> precision <span style="color:#f92672">/</span> (recall <span style="color:#f92672">+</span> precision)) <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">tibble</span>(recall, precision, f1_score)
+</code></pre></div><pre><code>## # A tibble: 1 x 3
+##   recall precision f1_score
+##    &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;
+## 1  0.765      0.65    0.703
+</code></pre><p>Interestingly, the model performance metrics we just calculated based on the individual bounding box predictions DO NOT match the model performance metrics calculated by Rekognition Custom Labels which we extracted from the evaluation results summary file at the beginning of this section. By comparison, the model performance metrics calculated by Rekognition Custom Labels seem to underestimate the true model performance.</p>
+<h2 id="step-7-deploy-your-model">Step 7: Deploy your model</h2>
+<p>It is time to deploy our Swoosh detection model to check its performance against the hold-out test set. You start the deployment by calling <code>start_project_version()</code> on the Rekognition object. We will go with the minimum number of inference units. The number of inference units decide the maximum number of transactions per second (TPS) a model endpoint can support for real-time predictions.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">rek<span style="color:#f92672">$</span><span style="color:#a6e22e">start_project_version</span>(ProjectVersionArn <span style="color:#f92672">=</span> model_arn, 
+                          MinInferenceUnits <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>)
+</code></pre></div><p>Use the following command to get the current deployment status. Model deployment is complete when the status is <code>RUNNING</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">rek<span style="color:#f92672">$</span><span style="color:#a6e22e">describe_project_versions</span>(project_arn, model_name) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">pluck</span>(<span style="color:#e6db74">&#34;ProjectVersionDescriptions&#34;</span>, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">&#34;Status&#34;</span>)
+</code></pre></div><pre><code>## [1] &quot;RUNNING&quot;
+</code></pre><h2 id="step-8-make-real-time-predictions-for-new-data">Step 8: Make real-time predictions for new data</h2>
+<p>We will use the 5 images of the hold-out test set that come with this repository to test the deployed Swoosh detector model. We will test each of the following images one by one:</p>
+<p align="center">
+<img src="./images/swoosh_test_set_compilation.png" width="70%" />
+</p>
+<p>As you can see, images 1 and 2 contain a single Swoosh each, image 3 contains no Swoosh, and images 5 and 6 include multiple Swooshes.</p>
+<p>We will show you various best practices on how to parse the results from the Rekognition Custom Labels API and how to add the received bounding box coordinates to the original image using the <code>magick</code> package.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">file_names <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">list.files</span>(<span style="color:#e6db74">&#34;./images/inference/&#34;</span>)
+path_to_file <span style="color:#f92672">&lt;-</span> <span style="color:#e6db74">&#34;./images/inference/&#34;</span>
+</code></pre></div><blockquote>
+<p><strong>Info</strong></p>
+<p>Your prediction results might differ slightly from the  results below because the Swoosh 
+object detection model was trained based on a radom split of the training data set.</p>
+</blockquote>
+<h3 id="image-1-a-single-swoosh">Image 1: A single Swoosh</h3>
+<p>We will read the first image into a raw vector and then send it to the model endpoint for prediction. Afterwards, we will parse the result into a <code>tibble</code> that will include one row per detected label with the respective label name and the confidence score.</p>
+<p>Unlike described in <a href="https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/rekognition.html#Rekognition.Client.detect_custom_labels">the official Rekognition Custom Labels documentation</a>, it is NOT necessary to pass the image as base64-encoded image bytes to <code>detect_custom_labels()</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">file <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(path_to_file, file_names[1])
+image <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">read_file_raw</span>(file)
+
+resp <span style="color:#f92672">&lt;-</span> rek<span style="color:#f92672">$</span><span style="color:#a6e22e">detect_custom_labels</span>(ProjectVersionArn <span style="color:#f92672">=</span> model_arn,
+                                 Image <span style="color:#f92672">=</span> <span style="color:#a6e22e">list</span>(
+                                   Bytes <span style="color:#f92672">=</span> image
+                                 )
+)
+
+<span style="color:#75715e"># Parse the result</span>
+names <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>CustomLabels <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">map_chr</span>(<span style="color:#e6db74">&#34;Name&#34;</span>)
+confidence <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>CustomLabels <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">map_dbl</span>(<span style="color:#e6db74">&#34;Confidence&#34;</span>)
+
+<span style="color:#a6e22e">tibble</span>(names, confidence)
+</code></pre></div><pre><code>## # A tibble: 1 x 2
+##   names  confidence
+##   &lt;chr&gt;       &lt;dbl&gt;
+## 1 Swoosh       84.5
+</code></pre><p>In total, the model detected one Swoosh in the image with a high confidence.</p>
+<p>Let us extract the bounding box coordinates from the response and add the bounding box to the original picture.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#75715e"># Convert raw image into a magick object</span>
+magick_image <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">image_read</span>(file)
+image_attr <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">image_info</span>(magick_image)
+
+<span style="color:#75715e"># Extract bounding box information of the detected object from the response</span>
+bounding_box <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>CustomLabels[[1]]<span style="color:#f92672">$</span>Geometry<span style="color:#f92672">$</span>BoundingBox
+
+<span style="color:#75715e"># Calculate bounding box properties</span>
+width <span style="color:#f92672">&lt;-</span> bounding_box<span style="color:#f92672">$</span>Width <span style="color:#f92672">*</span> image_attr<span style="color:#f92672">$</span>width 
+height <span style="color:#f92672">&lt;-</span> bounding_box<span style="color:#f92672">$</span>Height <span style="color:#f92672">*</span> image_attr<span style="color:#f92672">$</span>height
+left <span style="color:#f92672">&lt;-</span> bounding_box<span style="color:#f92672">$</span>Left <span style="color:#f92672">*</span> image_attr<span style="color:#f92672">$</span>width 
+top <span style="color:#f92672">&lt;-</span> bounding_box<span style="color:#f92672">$</span>Top <span style="color:#f92672">*</span> image_attr<span style="color:#f92672">$</span>height
+
+<span style="color:#75715e"># Add bounding box to image</span>
+image <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">image_draw</span>(magick_image)
+<span style="color:#a6e22e">rect</span>(left, top, left <span style="color:#f92672">+</span> width, top <span style="color:#f92672">+</span> height, border <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;red&#34;</span>, lty <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;dashed&#34;</span>, lwd <span style="color:#f92672">=</span> <span style="color:#ae81ff">15</span>)
+<span style="color:#a6e22e">dev.off</span>()
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">image <span style="color:#f92672">&lt;-</span> image <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">image_scale</span>(<span style="color:#ae81ff">500</span>)
+
+<span style="color:#a6e22e">print</span>(image)
+</code></pre></div><pre><code>## # A tibble: 1 x 7
+##   format width height colorspace matte filesize density
+##   &lt;chr&gt;  &lt;int&gt;  &lt;int&gt; &lt;chr&gt;      &lt;lgl&gt;    &lt;int&gt; &lt;chr&gt;  
+## 1 JPEG     500    333 sRGB       TRUE         0 72x72
+</code></pre><p><img src="./images/inference-results/01-inference-1.png" width="60%" style="display: block; margin: auto;" /></p>
+<p>Great! We see that our model detected the Swoosh in the image correctly. Let&rsquo;s continue!</p>
+<h3 id="image-2-another-single-swoosh">Image 2: Another single Swoosh</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">file <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(path_to_file, file_names[2])
+image <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">read_file_raw</span>(file)
+
+resp <span style="color:#f92672">&lt;-</span> rek<span style="color:#f92672">$</span><span style="color:#a6e22e">detect_custom_labels</span>(ProjectVersionArn <span style="color:#f92672">=</span> model_arn,
+                                 Image <span style="color:#f92672">=</span> <span style="color:#a6e22e">list</span>(
+                                   Bytes <span style="color:#f92672">=</span> image
+                                 )
+)
+
+<span style="color:#75715e"># Parse the result</span>
+names <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>CustomLabels <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">map_chr</span>(<span style="color:#e6db74">&#34;Name&#34;</span>)
+confidence <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>CustomLabels <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">map_dbl</span>(<span style="color:#e6db74">&#34;Confidence&#34;</span>)
+
+<span style="color:#a6e22e">tibble</span>(names, confidence)
+</code></pre></div><pre><code>## # A tibble: 1 x 2
+##   names  confidence
+##   &lt;chr&gt;       &lt;dbl&gt;
+## 1 Swoosh       62.8
+</code></pre><p>In total, the model detected one Swoosh in the second image. Let us add the bounding box to the image.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#75715e"># Convert raw image into a magick object</span>
+magick_image <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">image_read</span>(file)
+image_attr <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">image_info</span>(magick_image)
+
+<span style="color:#75715e"># Extract bounding box information of the detected object from the response</span>
+bounding_box <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>CustomLabels[[1]]<span style="color:#f92672">$</span>Geometry<span style="color:#f92672">$</span>BoundingBox
+
+<span style="color:#75715e"># Calculate bounding box properties</span>
+width <span style="color:#f92672">&lt;-</span> bounding_box<span style="color:#f92672">$</span>Width <span style="color:#f92672">*</span> image_attr<span style="color:#f92672">$</span>width 
+height <span style="color:#f92672">&lt;-</span> bounding_box<span style="color:#f92672">$</span>Height <span style="color:#f92672">*</span> image_attr<span style="color:#f92672">$</span>height
+left <span style="color:#f92672">&lt;-</span> bounding_box<span style="color:#f92672">$</span>Left <span style="color:#f92672">*</span> image_attr<span style="color:#f92672">$</span>width 
+top <span style="color:#f92672">&lt;-</span> bounding_box<span style="color:#f92672">$</span>Top <span style="color:#f92672">*</span> image_attr<span style="color:#f92672">$</span>height
+
+<span style="color:#75715e"># Add bounding box to image</span>
+image <span style="color:#f92672">&lt;-</span> magick_image <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">image_draw</span>(res <span style="color:#f92672">=</span> <span style="color:#ae81ff">50</span>)
+<span style="color:#a6e22e">rect</span>(left, top, left <span style="color:#f92672">+</span> width, top <span style="color:#f92672">+</span> height, border <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;red&#34;</span>, lty <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;dashed&#34;</span>, lwd <span style="color:#f92672">=</span> <span style="color:#ae81ff">15</span>)
+<span style="color:#a6e22e">dev.off</span>()
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">image <span style="color:#f92672">&lt;-</span> image <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">image_scale</span>(<span style="color:#ae81ff">500</span>)
+
+<span style="color:#a6e22e">print</span>(image)
+</code></pre></div><pre><code>## # A tibble: 1 x 7
+##   format width height colorspace matte filesize density
+##   &lt;chr&gt;  &lt;int&gt;  &lt;int&gt; &lt;chr&gt;      &lt;lgl&gt;    &lt;int&gt; &lt;chr&gt;  
+## 1 JPEG     500    667 sRGB       TRUE         0 72x72
+</code></pre><p><img src="./images/inference-results/02-inference-1.png" width="60%" style="display: block; margin: auto;" /></p>
+<p>The model also detected this Swoosh correctly.</p>
+<h3 id="image-3-no-swoosh">Image 3: No Swoosh</h3>
+<p>When Rekognition Custom Labels does not find a matching label in the image, it returns an empty response. The third image does not contain any Swoosh so the expected and parsed prediction result would be an empty tibble.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">file <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(path_to_file, file_names[3])
+image <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">read_file_raw</span>(file)
+
+resp <span style="color:#f92672">&lt;-</span> rek<span style="color:#f92672">$</span><span style="color:#a6e22e">detect_custom_labels</span>(ProjectVersionArn <span style="color:#f92672">=</span> model_arn,
+                                 Image <span style="color:#f92672">=</span> <span style="color:#a6e22e">list</span>(
+                                   Bytes <span style="color:#f92672">=</span> image
+                                 )
+)
+
+<span style="color:#75715e"># Parse the result</span>
+names <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>CustomLabels <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">map_chr</span>(<span style="color:#e6db74">&#34;Name&#34;</span>)
+confidence <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>CustomLabels <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">map_dbl</span>(<span style="color:#e6db74">&#34;Confidence&#34;</span>)
+
+<span style="color:#a6e22e">tibble</span>(names, confidence)
+</code></pre></div><pre><code>## # A tibble: 0 x 2
+## # ... with 2 variables: names &lt;chr&gt;, confidence &lt;dbl&gt;
+</code></pre><p>The result shows that the model also got this prediction correctly.</p>
+<h3 id="image-4-multiple-swooshes">Image 4: Multiple Swooshes</h3>
+<p>Our fourth image of the hold-out test set includes 4 Swooshes.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">file <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(path_to_file, file_names[4])
+image <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">read_file_raw</span>(file)
+
+resp <span style="color:#f92672">&lt;-</span> rek<span style="color:#f92672">$</span><span style="color:#a6e22e">detect_custom_labels</span>(ProjectVersionArn <span style="color:#f92672">=</span> model_arn,
+                                 Image <span style="color:#f92672">=</span> <span style="color:#a6e22e">list</span>(
+                                   Bytes <span style="color:#f92672">=</span> image
+                                 )
+)
+
+<span style="color:#75715e"># Parse the result</span>
+names <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>CustomLabels <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">map_chr</span>(<span style="color:#e6db74">&#34;Name&#34;</span>)
+confidence <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>CustomLabels <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">map_dbl</span>(<span style="color:#e6db74">&#34;Confidence&#34;</span>)
+
+<span style="color:#a6e22e">tibble</span>(names, confidence)
+</code></pre></div><pre><code>## # A tibble: 4 x 2
+##   names  confidence
+##   &lt;chr&gt;       &lt;dbl&gt;
+## 1 Swoosh       98.1
+## 2 Swoosh       97.9
+## 3 Swoosh       97.4
+## 4 Swoosh       94.9
+</code></pre><p>The parsed response shows that 4 Swooshes were detected in the image with a high confidence score.
+We will now add the correspondent bounding boxes to the original image.</p>
+<blockquote>
+<p><strong>Info</strong></p>
+<p>The <code>purrr</code>-<code>magick</code> recipe below allows you to extract the coordindates of ALL bounding boxes
+included in a Rekognition Custom Labels prediction response and add them to the original 
+image. You can also use it for parsing results with a single label match.</p>
+</blockquote>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#75715e"># Convert raw image into a magick object</span>
+magick_image <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">image_read</span>(file)
+image_attr <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">image_info</span>(magick_image)
+
+<span style="color:#75715e"># Extract bounding box information of detected objects from the response</span>
+bounding_boxes <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>CustomLabels
+
+<span style="color:#75715e"># Calculate bounding box properties</span>
+boxes <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">map_dfr</span>(bounding_boxes, <span style="color:#a6e22e">function</span>(x) {
+  bounding_box <span style="color:#f92672">&lt;-</span> x[[<span style="color:#e6db74">&#34;Geometry&#34;</span>]][[<span style="color:#e6db74">&#34;BoundingBox&#34;</span>]]
+  width <span style="color:#f92672">&lt;-</span> bounding_box<span style="color:#f92672">$</span>Width <span style="color:#f92672">*</span> image_attr<span style="color:#f92672">$</span>width 
+  height <span style="color:#f92672">&lt;-</span> bounding_box<span style="color:#f92672">$</span>Height <span style="color:#f92672">*</span> image_attr<span style="color:#f92672">$</span>height
+  left <span style="color:#f92672">&lt;-</span> bounding_box<span style="color:#f92672">$</span>Left <span style="color:#f92672">*</span> image_attr<span style="color:#f92672">$</span>width 
+  top <span style="color:#f92672">&lt;-</span> bounding_box<span style="color:#f92672">$</span>Top <span style="color:#f92672">*</span> image_attr<span style="color:#f92672">$</span>height
+  cords <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">c</span>(width <span style="color:#f92672">=</span> width, height <span style="color:#f92672">=</span> height, left <span style="color:#f92672">=</span> left, top <span style="color:#f92672">=</span> top)
+  cords
+})
+
+<span style="color:#75715e"># Add bounding boxes to image</span>
+image <span style="color:#f92672">&lt;-</span> magick_image <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">image_draw</span>()
+<span style="color:#a6e22e">rect</span>(boxes<span style="color:#f92672">$</span>left, boxes<span style="color:#f92672">$</span>top, boxes<span style="color:#f92672">$</span>left <span style="color:#f92672">+</span> boxes<span style="color:#f92672">$</span>width, boxes<span style="color:#f92672">$</span>top <span style="color:#f92672">+</span> boxes<span style="color:#f92672">$</span>height, border <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;red&#34;</span>, lty <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;dashed&#34;</span>, lwd <span style="color:#f92672">=</span> <span style="color:#ae81ff">15</span>)
+<span style="color:#a6e22e">dev.off</span>()
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">image <span style="color:#f92672">&lt;-</span> image <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">image_scale</span>(<span style="color:#ae81ff">500</span>)
+
+<span style="color:#a6e22e">print</span>(image)
+</code></pre></div><pre><code>## # A tibble: 1 x 7
+##   format width height colorspace matte filesize density
+##   &lt;chr&gt;  &lt;int&gt;  &lt;int&gt; &lt;chr&gt;      &lt;lgl&gt;    &lt;int&gt; &lt;chr&gt;  
+## 1 JPEG     500    667 sRGB       TRUE         0 72x72
+</code></pre><p><img src="./images/inference-results/04-inference-1.png" width="60%" style="display: block; margin: auto;" /></p>
+<p>The model  detected all Swooshes in the image correctly.</p>
+<h3 id="image-5-even-more-swooshes">Image 5: Even more Swooshes</h3>
+<p>Our final image from the hold-out test set contains 9 Swooshes in total. Let us see if our model will be able to detect all of them.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">file <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">paste0</span>(path_to_file, file_names[5])
+image <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">read_file_raw</span>(file)
+
+resp <span style="color:#f92672">&lt;-</span> rek<span style="color:#f92672">$</span><span style="color:#a6e22e">detect_custom_labels</span>(ProjectVersionArn <span style="color:#f92672">=</span> model_arn,
+                                 Image <span style="color:#f92672">=</span> <span style="color:#a6e22e">list</span>(
+                                   Bytes <span style="color:#f92672">=</span> image
+                                 )
+)
+
+<span style="color:#75715e"># Parse the result</span>
+names <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>CustomLabels <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">map_chr</span>(<span style="color:#e6db74">&#34;Name&#34;</span>)
+confidence <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>CustomLabels <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">map_dbl</span>(<span style="color:#e6db74">&#34;Confidence&#34;</span>)
+
+<span style="color:#a6e22e">tibble</span>(names, confidence)
+</code></pre></div><pre><code>## # A tibble: 10 x 2
+##    names  confidence
+##    &lt;chr&gt;       &lt;dbl&gt;
+##  1 Swoosh       99.9
+##  2 Swoosh       99.4
+##  3 Swoosh       99.4
+##  4 Swoosh       97.3
+##  5 Swoosh       90.3
+##  6 Swoosh       89.6
+##  7 Swoosh       85.0
+##  8 Swoosh       82.1
+##  9 Swoosh       71.2
+## 10 Swoosh       69.2
+</code></pre><p>Surprisingly, the model response shows 10 detected Swooshes. Let us add the bounding boxes.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#75715e"># Convert raw image into a magick object</span>
+magick_image <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">image_read</span>(file)
+image_attr <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">image_info</span>(magick_image)
+
+<span style="color:#75715e"># Extract bounding box information of detected objects from the response</span>
+bounding_boxes <span style="color:#f92672">&lt;-</span> resp<span style="color:#f92672">$</span>CustomLabels
+
+<span style="color:#75715e"># Calculate bounding box properties</span>
+boxes <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">map_dfr</span>(bounding_boxes, <span style="color:#a6e22e">function</span>(x) {
+  bounding_box <span style="color:#f92672">&lt;-</span> x[[<span style="color:#e6db74">&#34;Geometry&#34;</span>]][[<span style="color:#e6db74">&#34;BoundingBox&#34;</span>]]
+  width <span style="color:#f92672">&lt;-</span> bounding_box<span style="color:#f92672">$</span>Width <span style="color:#f92672">*</span> image_attr<span style="color:#f92672">$</span>width 
+  height <span style="color:#f92672">&lt;-</span> bounding_box<span style="color:#f92672">$</span>Height <span style="color:#f92672">*</span> image_attr<span style="color:#f92672">$</span>height
+  left <span style="color:#f92672">&lt;-</span> bounding_box<span style="color:#f92672">$</span>Left <span style="color:#f92672">*</span> image_attr<span style="color:#f92672">$</span>width 
+  top <span style="color:#f92672">&lt;-</span> bounding_box<span style="color:#f92672">$</span>Top <span style="color:#f92672">*</span> image_attr<span style="color:#f92672">$</span>height
+  cords <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">c</span>(width <span style="color:#f92672">=</span> width, height <span style="color:#f92672">=</span> height, left <span style="color:#f92672">=</span> left, top <span style="color:#f92672">=</span> top)
+  cords
+})
+
+<span style="color:#75715e"># Add bounding boxes to image</span>
+image <span style="color:#f92672">&lt;-</span> magick_image <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">image_draw</span>()
+<span style="color:#a6e22e">rect</span>(boxes<span style="color:#f92672">$</span>left, boxes<span style="color:#f92672">$</span>top, boxes<span style="color:#f92672">$</span>left <span style="color:#f92672">+</span> boxes<span style="color:#f92672">$</span>width, boxes<span style="color:#f92672">$</span>top <span style="color:#f92672">+</span> boxes<span style="color:#f92672">$</span>height, border <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;red&#34;</span>, lty <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;dashed&#34;</span>, lwd <span style="color:#f92672">=</span> <span style="color:#ae81ff">15</span>)
+<span style="color:#a6e22e">dev.off</span>()
+</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">image <span style="color:#f92672">&lt;-</span> image <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">image_scale</span>(<span style="color:#ae81ff">500</span>)
+
+<span style="color:#a6e22e">print</span>(image)
+</code></pre></div><pre><code>## # A tibble: 1 x 7
+##   format width height colorspace matte filesize density
+##   &lt;chr&gt;  &lt;int&gt;  &lt;int&gt; &lt;chr&gt;      &lt;lgl&gt;    &lt;int&gt; &lt;chr&gt;  
+## 1 JPEG     500    625 sRGB       TRUE         0 72x72
+</code></pre><p><img src="./images/inference-results/05-inference-1.png" width="60%" style="display: block; margin: auto;" /></p>
+<p>The visualized bounding boxes above in the image show the reason why the model detected 10 Swooshes in an image with only 9 Swooshes: One of the Swooshes was detected and counted twice by the model.</p>
+<h2 id="step-9-stop-your-model">Step 9: Stop your model</h2>
+<p>After we used the hold-out test set for making real-time predictions, we will now stop our deployed model by calling <code>stop_project_version()</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">rek<span style="color:#f92672">$</span><span style="color:#a6e22e">stop_project_version</span>(model_arn)
+</code></pre></div><p>The model stopped running when the returned status is <code>STOPPED</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">rek<span style="color:#f92672">$</span><span style="color:#a6e22e">describe_project_versions</span>(project_arn, model_name) <span style="color:#f92672">%&gt;%</span> 
+  <span style="color:#a6e22e">pluck</span>(<span style="color:#e6db74">&#34;ProjectVersionDescriptions&#34;</span>, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">&#34;Status&#34;</span>)
+</code></pre></div><pre><code>## [1] &quot;STOPPED&quot;
+</code></pre><p>You can always re-start a stopped model by calling <code>start_project_version()</code>:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">rek<span style="color:#f92672">$</span><span style="color:#a6e22e">start_project_version</span>(ProjectVersionArn <span style="color:#f92672">=</span> model_arn, 
+                          MinInferenceUnits <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span> )
+</code></pre></div><h2 id="summary">Summary</h2>
+<p>In this workshop module we built our own Swoosh detection model using Amazon Rekognition Custom Labels. What are our take home messages?</p>
+<ul>
+<li>
+<p>You can get started quickly building your own custom object detection and images classification models from scratch just by providing the labeled training data. You don&rsquo;t need to have any Deep Learning expertise and you can use Amazon Rekognition Custom Labels to start exploring this particular Machine Learning domain.</p>
+</li>
+<li>
+<p>Even small training data can produce very robust models that might already satisfy your production requirements. You can also use Rekognition Custom Labels models to build first baseline models.</p>
+</li>
+<li>
+<p>Don&rsquo;t disqualify trained models based on the model performance metrics too quickly. Especially, when the test set is relatively small. In our case, almost 50% of the False Positives in the test set were introduced by a single image. Besides mediocre model performance metrics, our Swoosh detection model had all 16 bounding box predictions in the 5 images of the hold-out test set correctly and had only one minor error when it counted a detected Swoosh twice.</p>
+</li>
+</ul>
+
+      </div>
+
+      <footer>
+        
+
+
+        <div id="disqus_thread"></div>
+<script type="application/javascript">
+    var disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "alex23lemm-github-io-1" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+        
+        
+      </footer>
+    </article>
+
+    
+  </section>
+
+      </div>
+
+      <footer class="footer">
+  <section class="container">
+    
+     © 2021
+    
+       · 
+      Powered by <a href="https://gohugo.io/">Hugo</a> & <a href="https://github.com/luizdepra/hugo-coder/">Coder</a>.
+    
+    
+  </section>
+</footer>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/languages/r.min.js"></script>
+<script>
+hljs.configure({languages: []});
+hljs.initHighlightingOnLoad();
+</script>
+
+    </main>
+
+    
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+	ga('create', 'UA-55248554-4', 'auto');
+	
+	ga('send', 'pageview');
+}
+</script>
+
+
+  </body>
+
+</html>
