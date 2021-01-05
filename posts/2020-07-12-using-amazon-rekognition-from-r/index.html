@@ -121,20 +121,16 @@
 <p>In the examples below we will focus on how Rekognition&rsquo;s “text-in-image” and “face comparison” features work using R. Following along it will be easy for you to apply your new knowledge to using the other features later on your own.</p>
 <p>The entire code of this article is also part of the self-paced and fully reproducible AWS AI Services for R users workshop that you can <a href="https://github.com/alex23lemm/AWS-AI-Services-R-Workshop">download from GitHub here</a>.</p>
 <h2 id="prerequisites">Prerequisites</h2>
-<p>In short, you need to have an IAM user with programmatic access to the AWS API and you need to save the user&rsquo;s access key ID and secret access key as R environment variables:</p>
-<p><strong>AWS Cloud</strong></p>
+<p>In short, you need to have an IAM admin user with programmatic access to the AWS API and you need to save the user&rsquo;s access key ID and secret access key as R environment variables:</p>
 <ul>
 <li>
-<p>It is a plus if you have some basic familiarity with the AWS Console.</p>
+<p>You need to have access to an AWS account using an IAM user. <a href="https://aws.amazon.com/de/free/">AWS Free Tier</a> does also work for this workshop.</p>
 </li>
 <li>
-<p>You need to have access to an AWS account using an IAM user. <a href="https://aws.amazon.com/free/">AWS Free Tier</a> does also work for this workshop.</p>
+<p>The IAM user needs to come with security credentials that allows him to access AWS (1) <a href="https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys">programmatically via the API</a> using an <strong>access key ID</strong> and a <strong>secret access key</strong> and (2) via the AWS Management Console.</p>
 </li>
 <li>
-<p>The IAM user needs to come with <a href="https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys">security credentials</a> (Access key ID, Secret access key) that allows him to make secure requests to AWS service APIs.</p>
-</li>
-<li>
-<p>You need to make sure that the <code>AmazonRekognitionFullAccess</code> policy is either attached to your IAM user directly or to a group your user is a member of. See <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_change-permissions.html">the official documentation</a> for changing permissions for an IAM user.</p>
+<p>For simplicity, you can use an IAM admin user to follow along: Attach the <code>AdministratorAccess</code> permissions either directly to your IAM user or to a group your user is a member of. See <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/getting-started_create-admin-group.html">the official documentation</a> for creating your first IAM admin user and group.</p>
 </li>
 </ul>
 <p><strong>Local installations &amp; configuration</strong></p>
@@ -144,7 +140,10 @@
 <pre><code class="language-{r}" data-lang="{r}">AWS_ACCESS_KEY_ID = [YOUR_ACCESS_KEY_ID]
 AWS_SECRET_ACCESS_KEY = [YOUR_SECRET_ACCESS_KEY]
 AWS_REGION = [CHOOSE_A_REGION_ID_LIKE_us-east-1]
-</code></pre><p>Using AWS Rekognition following the examples below should come at no cost. As of writing this article, the service is part of AWS Free Tier, which lasts 12 months and allows you analyze 5,000 images per month and store 1,000 pieces of face metadata per month.</p>
+</code></pre><ul>
+<li>Make to sure to install the remaining 4 R packages referenced in the <em>Loading the necessary libraries</em> section below on your machine.</li>
+</ul>
+<p>Using AWS Rekognition following the examples below should come at no cost. As of writing this article, the service is part of AWS Free Tier, which lasts 12 months and allows you analyze 5,000 images per month and store 1,000 pieces of face metadata per month.</p>
 <h2 id="some-additional-information-about-the-api">Some additional information about the API</h2>
 <p>You have two options to pass images for their analysis to Rekognition&rsquo;s API endpoints. Either you pass the images as references to images already uploaded in an Amazon S3 bucket. Or you pass the images as raw bytes which means that the images need to reside in your computer&rsquo;s memory.</p>
 <p><strong>Important</strong>: Both the paws documentation and the boto3 (official AWS SDK for Python) documentation mention to pass the images as base64-encoded images and not as raw bytes. Unfortunately, it seems that the documentation is not correct in either case because passing base64-encoded images in R did not work for me. <a href="https://stackoverflow.com/questions/47542341/how-do-i-convert-local-jpg-file-to-base64-to-work-with-boto3-and-detect-text">This Stack Overflow post</a>, where someone had the same issue in Python using boto3, made me switch successfully to passing raw bytes instead. So just make sure to think &ldquo;raw bytes&rdquo; every time you read &ldquo;base64-encoded&rdquo; in the paws or boto3 documentation of the Rekognition API.</p>

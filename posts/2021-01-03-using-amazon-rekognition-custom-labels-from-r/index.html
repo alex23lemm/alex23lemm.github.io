@@ -10,15 +10,11 @@
     <meta name="keywords" content="blog,analytics,personal,r,datascience,aws">
 
     <meta name="twitter:card" content="summary"/>
-<meta name="twitter:title" content="Using Amazon Rekognition Custom Labels from R"/>
-<meta name="twitter:description" content="In this article we will demonstrate how to use Amazon Rekognition Custom Labels using the fabulous paws package, an AWS SDK for R, created by David Kretch and Adam Banker.
-You can use Rekognition Custom Labels to train your own machine learning models that perform image classification (image level predictions) or object detection (object/bounding box level predictions).
-We will train an object detection model to detect the Swoosh, Nike&rsquo;s famous logo that Carolyn Davidson designed in 1971."/>
+<meta name="twitter:title" content="Using Amazon Rekognition Custom Labels from R to train a Swoosh detector"/>
+<meta name="twitter:description" content="This article explains how to train an object detection model to detect the Nike Swoosh using Amazon Rekognition Custom Labels."/>
 
-    <meta property="og:title" content="Using Amazon Rekognition Custom Labels from R" />
-<meta property="og:description" content="In this article we will demonstrate how to use Amazon Rekognition Custom Labels using the fabulous paws package, an AWS SDK for R, created by David Kretch and Adam Banker.
-You can use Rekognition Custom Labels to train your own machine learning models that perform image classification (image level predictions) or object detection (object/bounding box level predictions).
-We will train an object detection model to detect the Swoosh, Nike&rsquo;s famous logo that Carolyn Davidson designed in 1971." />
+    <meta property="og:title" content="Using Amazon Rekognition Custom Labels from R to train a Swoosh detector" />
+<meta property="og:description" content="This article explains how to train an object detection model to detect the Nike Swoosh using Amazon Rekognition Custom Labels." />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://alex23lemm.github.io/posts/2021-01-03-using-amazon-rekognition-custom-labels-from-r/" />
 <meta property="article:published_time" content="2021-01-03T00:00:00+00:00" />
@@ -29,7 +25,7 @@ We will train an object detection model to detect the Swoosh, Nike&rsquo;s famou
       <base href="https://alex23lemm.github.io/posts/2021-01-03-using-amazon-rekognition-custom-labels-from-r/">
     
     <title>
-  Using Amazon Rekognition Custom Labels from R · alex23lemm
+  Using Amazon Rekognition Custom Labels from R to train a Swoosh detector · alex23lemm
 </title>
 
     
@@ -90,7 +86,7 @@ We will train an object detection model to detect the Swoosh, Nike&rsquo;s famou
     <article>
       <header>
         <div class="post-title">
-          <h1 class="title">Using Amazon Rekognition Custom Labels from R</h1>
+          <h1 class="title">Using Amazon Rekognition Custom Labels from R to train a Swoosh detector</h1>
         </div>
         <div class="post-meta">
           <div class="date">
@@ -102,7 +98,7 @@ We will train an object detection model to detect the Swoosh, Nike&rsquo;s famou
             </span>
             <span class="reading-time">
               <i class="fas fa-clock"></i>
-              23 minutes read
+              24 minutes read
             </span>
           </div>
           
@@ -111,9 +107,10 @@ We will train an object detection model to detect the Swoosh, Nike&rsquo;s famou
       </header>
 
       <div>
-        <p>In this article we will demonstrate how to use Amazon Rekognition Custom Labels using the fabulous <a href="https://github.com/paws-r/paws">paws package</a>, an AWS SDK for R, created by <a href="https://github.com/davidkretch">David Kretch</a> and <a href="https://github.com/adambanker">Adam Banker</a>.</p>
-<p>You can use Rekognition Custom Labels to train your own machine learning models that perform image classification (image level predictions) or object detection (object/bounding box level predictions).</p>
-<p>We will train an object detection model to detect the Swoosh, Nike&rsquo;s famous logo that Carolyn Davidson designed in 1971.</p>
+        <p>You can use Rekognition Custom Labels to train your own machine learning models that perform image classification (image level predictions) or object detection (object/bounding box level predictions).</p>
+<p>Amazon Rekognition Custom Labels automatically selects the right machine learning algorithm to train your custom machine learning model based on the labeled data you provide without requiring deep learning expertise.</p>
+<p>R users can access and use Amazon Rekognition Custom Labels using the fabulous <a href="https://github.com/paws-r/paws">paws package</a>, an AWS SDK for R, created by <a href="https://github.com/davidkretch">David Kretch</a> and <a href="https://github.com/adambanker">Adam Banker</a>.</p>
+<p>In this article, we will use Rekognition Custom Labels to train an object detection model to detect the Swoosh, Nike&rsquo;s famous logo that Carolyn Davidson designed in 1971:</p>
 <p align="center">
 <img src="./images/nike_logo.png" width="40%" />
 </p>
@@ -131,31 +128,18 @@ We will train an object detection model to detect the Swoosh, Nike&rsquo;s famou
 <li>Step 9: Stop your model</li>
 </ul>
 <p>We will follow the steps described above to build our Swoosh detection model. Not all of the steps are supported by the Rekognition API. If necessary, we will switch over to the Amazon Rekognition Custom Labels console.</p>
-<p>The entire code of this article is also part of the self-paced and fully reproducible AWS AI Services for R users workshop that you can <a href="https://github.com/alex23lemm/AWS-AI-Services-R-Workshop">download from GitHub here</a>.</p>
-<blockquote>
-<p><strong>Info</strong></p>
-<p>At the time of writing this article in December 2020, Amazon Rekognition Custom Labels is available in 4 regions: 
-us-east-1 (N. Virginia), us-east-2 (Ohio), us-west-2 (Oregon), and eu-west-1 (Ireland).
-Please make sure to update the <code>AWS_REGION</code> entry in your <code>.Renviron</code> file in case you configured another AWS region.</p>
-<p>Amazon Rekognition Custom Labels is currently also part of the AWS Free Tier which means you can get started for free:
-The <a href="https://aws.amazon.com/rekognition/pricing/">service-specific Free Tier</a> lasts 3 months and includes 10 free 
-training hours per month and 4 free inference hours per month.</p>
-</blockquote>
+<p>The entire code of this article is also part of a self-paced and fully reproducible workshop based on Rmarkdown that you can <a href="https://github.com/alex23lemm/AWS-AI-Services-R-Workshop">download from GitHub here</a>.</p>
 <h2 id="prerequisites">Prerequisites</h2>
-<p>In short, you need to have an IAM user with programmatic access to the AWS API and you need to save the user&rsquo;s access key ID and secret access key as R environment variables:</p>
-<p><strong>AWS Cloud</strong></p>
+<p>In short, you need to have an IAM admin user with programmatic access to the AWS API and you need to save the user&rsquo;s access key ID and secret access key as R environment variables:</p>
 <ul>
 <li>
-<p>It is a little plus if you have some basic familiarity with the AWS Console.</p>
+<p>You need to have access to an AWS account using an IAM user. <a href="https://aws.amazon.com/de/free/">AWS Free Tier</a> does also work for this workshop.</p>
 </li>
 <li>
-<p>You need to have access to an AWS account using an IAM user. <a href="https://aws.amazon.com/free/">AWS Free Tier</a> does also work for this workshop.</p>
+<p>The IAM user needs to come with security credentials that allows him to access AWS (1) <a href="https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys">programmatically via the API</a> using an <strong>access key ID</strong> and a <strong>secret access key</strong> and (2) via the AWS Management Console.</p>
 </li>
 <li>
-<p>The IAM user needs to come with <a href="https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys">security credentials</a> (Access key ID, Secret access key) that allows him to make secure requests to AWS service APIs.</p>
-</li>
-<li>
-<p>You need to make sure that the <code>AmazonRekognitionFullAccess</code> policy is either attached to your IAM user directly or to a group your user is a member of. See <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_change-permissions.html">the official documentation</a> for changing permissions for an IAM user.</p>
+<p>For simplicity, you can use an IAM admin user to follow along: Attach the <code>AdministratorAccess</code> permissions either directly to your IAM user or to a group your user is a member of. See <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/getting-started_create-admin-group.html">the official documentation</a> for creating your first IAM admin user and group.</p>
 </li>
 </ul>
 <p><strong>Local installations &amp; configuration</strong></p>
@@ -165,7 +149,19 @@ training hours per month and 4 free inference hours per month.</p>
 <pre><code class="language-{r}" data-lang="{r}">AWS_ACCESS_KEY_ID = [YOUR_ACCESS_KEY_ID]
 AWS_SECRET_ACCESS_KEY = [YOUR_SECRET_ACCESS_KEY]
 AWS_REGION = [CHOOSE_A_REGION_ID_LIKE_us-east-1]
-</code></pre><h2 id="load-the-necessary-libraries">Load the necessary libraries</h2>
+</code></pre><ul>
+<li>Make to sure to install the remaining 8 R packages referenced in the next section on your machine.</li>
+</ul>
+<blockquote>
+<p><strong>Info</strong></p>
+<p>At the time of writing this article in December 2020, Amazon Rekognition Custom Labels is available in 4 regions: 
+us-east-1 (N. Virginia), us-east-2 (Ohio), us-west-2 (Oregon), and eu-west-1 (Ireland).
+Please make sure to update the <code>AWS_REGION</code> entry in your <code>.Renviron</code> file in case you configured another AWS region.</p>
+<p>Amazon Rekognition Custom Labels is currently also part of the AWS Free Tier which means you can get started for free:
+The <a href="https://aws.amazon.com/rekognition/pricing/">service-specific Free Tier</a> lasts 3 months and includes 10 free 
+training hours per month and 4 free inference hours per month.</p>
+</blockquote>
+<h2 id="load-the-necessary-libraries">Load the necessary libraries</h2>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">library</span>(paws)
 <span style="color:#a6e22e">library</span>(purrr)
 <span style="color:#a6e22e">library</span>(readr)
@@ -190,7 +186,7 @@ Always scale your images accordingly before you use Amazon Rekognition Custom La
 <p>Additional requirements like supported image file formats, maximum image size, maximum number 
 of labels per image are described <a href="https://docs.aws.amazon.com/rekognition/latest/customlabels-dg/limits.html">in the official documentation here</a>.</p>
 </blockquote>
-<p>We used the purrr-EBImage-recipe below to scale the images from Pexels below the 4096 pixels threshold before we uploaded them to Kaggle. You can use the recipe in your future Rekognition Custom Labels projects:</p>
+<p>We used the purrr-EBImage-recipe below to scale the images from Pexels below the 4096 pixels threshold before we uploaded them to Kaggle. You can use the recipe in your future Rekognition Custom Labels projects but we don&rsquo;t need to use it here:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r"><span style="color:#a6e22e">library</span>(EBImage)
 <span style="color:#a6e22e">library</span>(purrr)
 
@@ -234,14 +230,14 @@ custom_labels_bucket <span style="color:#f92672">&lt;-</span> s3<span style="col
 <p>After the upload, the S3 folder structure should look like this and the <strong>/train</strong> subfolder should contain 70 images:</p>
 <p><img src="./images/console/04_post_S3_upload.png" width="85%" /></p>
 <h2 id="step-3-create-a-rekognition-custom-labels-dataset">Step 3: Create a Rekognition Custom Labels dataset</h2>
-<p>Now, We will create a Rekognition Custom Labels dataset. A Rekognition Custom Labels dataset references the training/test dataset residing in S3 and allows you to add labels/bounding box metadata to your images. The labeling process will generate a manifest file that includes (1) the respective labels/bounding box information and (2) the references to the images stored in S3. Without a manifest file we won&rsquo;t be able to start a Rekognition Custom Labels training job.</p>
+<p>Now, we will create a Rekognition Custom Labels dataset. A Rekognition Custom Labels dataset references the training/test dataset residing in S3 and allows you to add labels/bounding box metadata to your images. The labeling process will generate a manifest file that includes (1) the respective labels/bounding box information and (2) the references to the images stored in S3. Without a manifest file we won&rsquo;t be able to start a Rekognition Custom Labels training job.</p>
 <p>You can only create Rekognition Custom Labels datasets by using the Amazon Rekognition Custom Labels console. However, instead of creating the image labels/bounding boxes from scratch which is a kind of cumbersome manual process, you can also create a Custom Labels dataset based on an existing manifest file that already includes the respective label/bounding box information of your dataset.</p>
 <p>And you&rsquo;re lucky: We already created the manifest file with the necessary information for you. This will save you approximately 30-40 minutes and you won&rsquo;t need to draw bounding boxes yourself.</p>
 <h3 id="step-31-edit-and-upload-the-manifest-file">Step 3.1: Edit and upload the manifest file</h3>
 <p>On your machine:</p>
 <ul>
 <li>
-<p>Open the manifest file <strong>output.manifest</strong> in <strong>./04_Rekognition_Custom_Labels_and_R/assets/</strong> on your machine.</p>
+<p>Download and open the manifest file you can <a href="https://github.com/alex23lemm/AWS-AI-Services-R-Workshop/blob/master/04_Rekognition_Custom_Labels_and_R/assets/output.manifest">get from GitHub here</a>.</p>
 </li>
 <li>
 <p>Replace the beginning of <strong>ALL</strong> 70 <code>s3://[YOUR_CUSTOM_LABELS_DEFAULT_BUCKET]/...</code> resource identifiers with the correct name of your S3 Rekognition Custom Labels default bucket. You can get the bucket name by printing  <code>custom_labels_bucket</code> to the R console. Save and close the manifest file.</p>
@@ -282,7 +278,8 @@ project_arn <span style="color:#f92672">&lt;-</span> rek<span style="color:#f926
   <span style="color:#a6e22e">pluck</span>(<span style="color:#e6db74">&#34;ProjectDescriptions&#34;</span>) <span style="color:#f92672">%&gt;%</span> 
   <span style="color:#a6e22e">map_chr</span>(<span style="color:#e6db74">&#34;ProjectArn&#34;</span>)
 </code></pre></div><h2 id="step-5-train-your-model">Step 5: Train your model</h2>
-<p>You train a model by calling <code>create_project_version()</code> which is not the most intuitive function name in this context. To train a model, the following information is needed:</p>
+<p>You train a model by calling <code>create_project_version()</code> which is not the most intuitive function name in this context. As you will see below, we don&rsquo;t need to choose nor specify the training algorithm itself. Based on the provided labeled data Amazon Rekognition Custom Labels automatically selects the right machine learning algorithm, trains a model (in our case an object detection model), and provides model performance metrics at the end of the training.</p>
+<p>To train a model, the following information is needed:</p>
 <ul>
 <li>
 <p><strong>Name</strong>: A unique name for the model. Best practice is to use a <strong>project name - timestamp combination</strong> for the model name.</p>
@@ -507,7 +504,7 @@ f1_score <span style="color:#f92672">&lt;-</span> (recall <span style="color:#f9
   <span style="color:#a6e22e">pluck</span>(<span style="color:#e6db74">&#34;ProjectVersionDescriptions&#34;</span>, <span style="color:#ae81ff">1</span>, <span style="color:#e6db74">&#34;Status&#34;</span>)
 </code></pre></div><pre><code>## [1] &quot;RUNNING&quot;
 </code></pre><h2 id="step-8-make-real-time-predictions-for-new-data">Step 8: Make real-time predictions for new data</h2>
-<p>We will use the 5 images of the hold-out test set that come with this repository to test the deployed Swoosh detector model. We will test each of the following images one by one:</p>
+<p>We will use <a href="https://github.com/alex23lemm/AWS-AI-Services-R-Workshop/tree/master/04_Rekognition_Custom_Labels_and_R/images/inference">the 5 images of the hold-out test set</a> to test the deployed Swoosh detector model. Make sure to store the hold-out test set images underneath <code>./images/inference</code> on your end. We will test each of the following images one by one:</p>
 <p align="center">
 <img src="./images/swoosh_test_set_compilation.png" width="70%" />
 </p>

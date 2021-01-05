@@ -8,14 +8,14 @@
     <language>en</language>
     <lastBuildDate>Sun, 03 Jan 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://alex23lemm.github.io/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Using Amazon Rekognition Custom Labels from R</title>
+      <title>Using Amazon Rekognition Custom Labels from R to train a Swoosh detector</title>
       <link>https://alex23lemm.github.io/posts/2021-01-03-using-amazon-rekognition-custom-labels-from-r/</link>
       <pubDate>Sun, 03 Jan 2021 00:00:00 +0000</pubDate>
       
       <guid>https://alex23lemm.github.io/posts/2021-01-03-using-amazon-rekognition-custom-labels-from-r/</guid>
-      <description>In this article we will demonstrate how to use Amazon Rekognition Custom Labels using the fabulous paws package, an AWS SDK for R, created by David Kretch and Adam Banker.
-You can use Rekognition Custom Labels to train your own machine learning models that perform image classification (image level predictions) or object detection (object/bounding box level predictions).
-We will train an object detection model to detect the Swoosh, Nike&amp;rsquo;s famous logo that Carolyn Davidson designed in 1971.</description>
+      <description>You can use Rekognition Custom Labels to train your own machine learning models that perform image classification (image level predictions) or object detection (object/bounding box level predictions).
+Amazon Rekognition Custom Labels automatically selects the right machine learning algorithm to train your custom machine learning model based on the labeled data you provide without requiring deep learning expertise.
+R users can access and use Amazon Rekognition Custom Labels using the fabulous paws package, an AWS SDK for R, created by David Kretch and Adam Banker.</description>
     </item>
     
     <item>
