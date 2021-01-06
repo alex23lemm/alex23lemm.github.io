@@ -133,7 +133,7 @@
 <p>In short, you need to have an IAM admin user with programmatic access to the AWS API and you need to save the user&rsquo;s access key ID and secret access key as R environment variables:</p>
 <ul>
 <li>
-<p>You need to have access to an AWS account using an IAM user. <a href="https://aws.amazon.com/de/free/">AWS Free Tier</a> does also work for this workshop.</p>
+<p>You need to have access to an AWS account using an IAM user.</p>
 </li>
 <li>
 <p>The IAM user needs to come with security credentials that allows him to access AWS (1) <a href="https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys">programmatically via the API</a> using an <strong>access key ID</strong> and a <strong>secret access key</strong> and (2) via the AWS Management Console.</p>
@@ -172,7 +172,7 @@ training hours per month and 4 free inference hours per month.</p>
 <span style="color:#a6e22e">library</span>(dplyr)
 <span style="color:#a6e22e">library</span>(magick)
 </code></pre></div><h2 id="step-0-collect-and-preprocess-your-image-data">Step 0: Collect and preprocess your image data</h2>
-<p>We collected 75 free and publicly available images containing the Nike Swoosh logo from <a href="https://www.pexels.com/">pexels.com</a>, preprocessed/scaled the images, and uploaded 70 of the preprocessed images as a dataset to Kaggle that we will use to train the Swoosh detector model. The remaining 5 of the pre-processed images come with this repository as a hold-out test set for making real-time predictions.</p>
+<p>We collected 75 free and publicly available images containing the Nike Swoosh logo from <a href="https://www.pexels.com/">pexels.com</a>, preprocessed/scaled the images, and uploaded 70 of the preprocessed images as a dataset to Kaggle that we will use to train the Swoosh detector model. The remaining 5 of the pre-processed images come with <a href="https://github.com/alex23lemm/AWS-AI-Services-R-Workshop/tree/master/04_Rekognition_Custom_Labels_and_R/images/inference">this repository</a> as a hold-out test set for making real-time predictions.</p>
 <p>Please <a href="https://www.kaggle.com/alex23lemm/nike-swoosh-compilation">navigate to the Nike Swoosh Compilation dataset</a> on Kaggle, click on the page&rsquo;s <strong>Download</strong> button,  and unzip <strong>archive.zip</strong> once the download is complete.</p>
 <p>The compilation below shows some of the images we collected:</p>
 <p align="center">
@@ -782,7 +782,7 @@ image <span style="color:#f92672">&lt;-</span> magick_image <span style="color:#
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-r" data-lang="r">rek<span style="color:#f92672">$</span><span style="color:#a6e22e">start_project_version</span>(ProjectVersionArn <span style="color:#f92672">=</span> model_arn, 
                           MinInferenceUnits <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span> )
 </code></pre></div><h2 id="summary">Summary</h2>
-<p>In this workshop module we built our own Swoosh detection model using Amazon Rekognition Custom Labels. What are our take home messages?</p>
+<p>In this article we described how to build our own Swoosh detection model using Amazon Rekognition Custom Labels. What are our take home messages?</p>
 <ul>
 <li>
 <p>You can get started quickly building your own custom object detection and images classification models from scratch just by providing the labeled training data. You don&rsquo;t need to have any Deep Learning expertise and you can use Amazon Rekognition Custom Labels to start exploring this particular Machine Learning domain.</p>
@@ -792,6 +792,9 @@ image <span style="color:#f92672">&lt;-</span> magick_image <span style="color:#
 </li>
 <li>
 <p>Don&rsquo;t disqualify trained models based on the model performance metrics too quickly. Especially, when the test set is relatively small. In our case, almost 50% of the False Positives in the test set were introduced by a single image. Besides mediocre model performance metrics, our Swoosh detection model had all 16 bounding box predictions in the 5 images of the hold-out test set correctly and had only one minor error when it counted a detected Swoosh twice.</p>
+</li>
+<li>
+<p>You can easily integrate Amazon Rekognition Custom Labels models into your R and Shiny applications similar to other AWS AI Services which <a href="https://github.com/alex23lemm/AWS-AI-Services-R-Workshop/blob/master/03_GoT_Shiny_app/Instructions.md">we describe here</a>.</p>
 </li>
 </ul>
 
